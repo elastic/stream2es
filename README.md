@@ -27,16 +27,15 @@ Index 100 Wikipedia docs *starting at* document 100.
         processed 100 docs
         %
 
-What's this push/pull output?  wiki2es uses a `LinkedBlockingQueue`
-internally to throttle reading from the wikipedia dump if it gets too
-far ahead of ES's ability to index a bulk request.  The next page
-handler will block until a spot is freed up on the queue.
+What's this push/pull output?  wiki2es starts up indexing threads that
+pull bulk requests concurrently from an internal queue.  A page
+callback may block if it has to wait for a spot.
 
 The line `>--> push bulk: items:92 bytes:3153144 first-id:593` means
 that a bulk request with 92 docs, of roughly 3153144 bytes in size,
-with first doc ID of 593 has been pushed onto the internal indexing
-queue.  `<--< pull bulk: 92 items` indicates that the bulk request has
-been pulled from the queue and is being POSTed to ES.
+with first doc ID of 593 has been enqueued.  `<--< pull bulk: 92 items`
+indicates that the bulk request has been pulled from the queue
+and is being POSTed to ES.
 
 Currently the bulk size is hard-coded at 3MiB of data.
 
