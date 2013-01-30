@@ -28,8 +28,8 @@
   ([s]
      (quit "%s" s))
   ([fmt & s]
-     (apply log/infof fmt s)
      (shutdown-agents)
+     (println (apply format fmt s))
      (System/exit 0)))
 
 (defn page2item [offset page]
@@ -138,5 +138,8 @@
                         :indexer indexer
                         :items []})
             parser (xml/make-parser bz2 (make-handler state))]
-        (.parse parser))
-      (println (version)))))
+        (try
+          (.parse parser)
+          (catch Exception e
+            (quit "can't parse: %s" (str e)))))
+      (quit (version)))))
