@@ -7,6 +7,7 @@ clean:
 	lein clean
 
 package: clean
+	mkdir -p etc
 	echo -n $(VERSION) >etc/version.txt
 	lein bin
 
