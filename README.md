@@ -31,7 +31,7 @@ Currently the bulk size is hard-coded at 3MiB.
 
 # Contributing
 
-es2unix is written in Clojure.  You'll need leiningen 2.0+ to build.
+wiki2es is written in Clojure.  You'll need leiningen 2.0+ to build.
 
         % lein bin
         % target/wiki2es /path/to/dump
