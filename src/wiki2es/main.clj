@@ -139,4 +139,4 @@
                         :items []})
             parser (xml/make-parser bz2 (make-handler state))]
         (.parse parser))
-      (println "version" (version)))))
+      (println (version)))))
