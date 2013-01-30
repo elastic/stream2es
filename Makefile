@@ -1,5 +1,5 @@
 NAME = wiki2es
-VERSION = $(shell cat etc/version.txt)
+VERSION = $(shell bin/version)
 BIN = $(NAME)-$(VERSION)
 S3HOME = s3://download.elasticsearch.org/wiki2es
 
@@ -7,6 +7,7 @@ clean:
 	lein clean
 
 package: clean
+	echo -n $(VERSION) >etc/version.txt
 	lein bin
 
 release: package
