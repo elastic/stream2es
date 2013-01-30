@@ -1,5 +1,5 @@
 NAME = wiki2es
-VERSION = $(shell bin/version)
+VERSION = $(shell git ver)
 BIN = $(NAME)-$(VERSION)
 S3HOME = s3://download.elasticsearch.org/wiki2es
 
