@@ -1,7 +1,7 @@
 # wiki2es
 
-For when you need a little more control than the
-`elasticsearch-river-wikipedia` gives you.
+For when you need a little more control than
+[elasticsearch-river-wikipedia](https://github.com/elasticsearch/elasticsearch-river-wikipedia).
 
 ## Install
 
