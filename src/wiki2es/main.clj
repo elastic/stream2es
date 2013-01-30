@@ -2,9 +2,10 @@
   (:gen-class)
   (:require [cheshire.core :as json]
             [clj-http.client :as http]
+            [wiki2es.log :as log]
             [wiki2es.size :refer [size-of]]
-            [wiki2es.xml :as xml]
-            [wiki2es.log :as log])
+            [wiki2es.version :refer [version]]
+            [wiki2es.xml :as xml])
   (:import (java.util.concurrent LinkedBlockingQueue)))
 
 (def _index
@@ -28,6 +29,7 @@
      (quit "%s" s))
   ([fmt & s]
      (apply log/infof fmt s)
+     (shutdown-agents)
      (System/exit 0)))
 
 (defn page2item [offset page]
@@ -126,7 +128,7 @@
 
 (defn -main [& args]
   (let [[bz2 stopafter skip] args]
-    (when bz2
+    (if bz2
       (let [indexer (start-indexer)
             state (ref {:stopafter (Integer/parseInt (or stopafter "-1"))
                         :maxbytes bulk-bytes
@@ -136,4 +138,5 @@
                         :indexer indexer
                         :items []})
             parser (xml/make-parser bz2 (make-handler state))]
-        (.parse parser)))))
+        (.parse parser))
+      (println "version" (version)))))
