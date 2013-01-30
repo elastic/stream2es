@@ -6,13 +6,17 @@
             [wiki2es.size :refer [size-of]]
             [wiki2es.version :refer [version]]
             [wiki2es.xml :as xml])
-  (:import (java.util.concurrent LinkedBlockingQueue)))
+  (:import (java.util.concurrent CountDownLatch
+                                 LinkedBlockingQueue)))
 
 (def _index
   "wiki")
 
 (def _type
   "page")
+
+(def n-indexers
+  2)
 
 (def queue-size
   10)
@@ -110,18 +114,28 @@
 
 (defn index-bulk [q total]
   (let [bulk (.take q)]
-    (when (sequential? bulk)
+    (when (and (sequential? bulk) (pos? (count bulk)))
       (log/info "<--< pull bulk:" (count bulk) "items")
       (post (make-indexable-bulk bulk)))
-    (when (= :stop bulk)
-      (quit "processed %d docs" total))
-    (recur q (+ total (count bulk)))))
+    (when-not (= :stop bulk)
+      (swap! total + (count bulk))
+      (recur q total))))
 
-(defn start-indexer []
+(defn start-indexer-pool []
   (let [q (LinkedBlockingQueue. queue-size)
-        total-bulks (atom 0)
-        thr (Thread. (fn [] (index-bulk q 0)))]
-    (.start thr)
+        latch (CountDownLatch. n-indexers)
+        total (atom 0)
+        disp (fn []
+               (index-bulk q total)
+               (.countDown latch))
+        kill (fn []
+               (.await latch)
+               (quit "processed %d docs" @total))]
+    ;; start index pool
+    (dotimes [_ n-indexers]
+      (.start (Thread. disp)))
+    ;; start lifecycle
+    (.start (Thread. kill))
     ;; This becomes idxr above!
     (fn [bulk]
       (.put q bulk))))
@@ -129,7 +143,7 @@
 (defn -main [& args]
   (let [[bz2 stopafter skip] args]
     (if bz2
-      (let [indexer (start-indexer)
+      (let [indexer (start-indexer-pool)
             state (ref {:stopafter (Integer/parseInt (or stopafter "-1"))
                         :maxbytes bulk-bytes
                         :skip (Integer/parseInt (or skip "0"))
