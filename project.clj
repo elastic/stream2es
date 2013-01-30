@@ -12,5 +12,4 @@
                  [cheshire "5.0.1"]
                  [clj-http "0.6.3"]]
   :plugins [[lein-bin "0.3.0"]]
-;;  :bin {:name (str "wiki2es-" (-> "etc/version.txt" slurp .trim))}
   :main wiki2es.main)
