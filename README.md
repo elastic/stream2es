@@ -7,25 +7,38 @@ For when you need a little more control than
 
         % curl -O download.elasticsearch.org/wiki2es/wiki2es; chmod +x wiki2es
 
-## Usage
+## Quick Start
 
-Index 100 Wikipedia docs.
+By default, `wiki2es` indexes 500 pages from the latest article dump.
 
-        % wiki2es /path/to/enwiki-20121201-pages-articles.xml.bz2 100
-        >--> push bulk: items:100 bytes:1747760 first-id:10
-        <--< pull bulk: 100 items
-        processed 100 docs
-        %
+        % ./wiki2es
+        >--> push bulk: items:141 bytes:3169452 first-id:10
+        <--< pull bulk: 141 items
+        >--> push bulk: items:90 bytes:3263022 first-id:661
+        <--< pull bulk: 90 items
+        <--< pull bulk: 105 items
+        >--> push bulk: items:105 bytes:3169114 first-id:807
+        >--> push bulk: items:93 bytes:3220726 first-id:963
+        <--< pull bulk: 93 items
+        >--> push bulk: items:71 bytes:2273986 first-id:1134
+        <--< pull bulk: 71 items
+        processed 500 docs
 
 Index 100 Wikipedia docs *starting at* document 100.
 
-        % wiki2es /d/data/enwiki-20121201-pages-articles.xml.bz2 100 100
-        >--> push bulk: items:92 bytes:3153144 first-id:593
-        <--< pull bulk: 92 items
-        >--> push bulk: items:8 bytes:314410 first-id:742
-        <--< pull bulk: 8 items
+        % ./wiki2es --max-docs 100 --skip 100
+        >--> push bulk: items:91 bytes:3164018 first-id:593
+        <--< pull bulk: 91 items
+        <--< pull bulk: 9 items
+        >--> push bulk: items:9 bytes:345440 first-id:740
         processed 100 docs
-        %
+
+If you're at a café or want to use a local copy of the dump, supply `--url`:
+
+        % ./wiki2es --max-docs 5 --url /d/data/enwiki-20121201-pages-articles.xml.bz2
+        <--< pull bulk: 5 items
+        >--> push bulk: items:5 bytes:109426 first-id:10
+        processed 5 docs
 
 What's this push/pull output?  wiki2es starts up indexing threads that
 pull bulk requests concurrently from an internal queue.  A page
@@ -35,9 +48,22 @@ The line `>--> push bulk: items:92 bytes:3153144 first-id:593` means
 that a bulk request with 92 docs, of roughly 3153144 bytes in size,
 with first doc ID of 593 has been enqueued.  `<--< pull bulk: 92 items`
 indicates that the bulk request has been pulled from the queue
-and is being POSTed to ES.
+and has been submitted for indexing to ES.
 
-Currently the bulk size is hard-coded at 3MiB of data.
+The bulk size defaults to 3MiB but you can supply `--bulk-bytes` to
+change it.
+
+## Options
+
+        --index         ES index (default: wiki)
+        --bulk-bytes    Bulk size in bytes (default: 3145728)
+        --max-docs      Number of docs to index (default: 500)
+        --queue         Size of the internal bulk queue (default: 20)
+        --skip          Skip this many docs before indexing (default: 0)
+        --type          ES type (default: page)
+        --url           Wiki dump locator (default: http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2)
+        --version       Print version (default: false)
+        --workers       Number of indexing threads (default: 2)
 
 # Contributing
 
