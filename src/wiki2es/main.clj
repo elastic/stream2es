@@ -6,7 +6,8 @@
             [wiki2es.log :as log]
             [wiki2es.size :refer [size-of]]
             [wiki2es.version :refer [version]]
-            [wiki2es.xml :as xml])
+            [wiki2es.xml :as xml]
+            [wiki2es.help :refer [help]])
   (:import (java.util.concurrent CountDownLatch
                                  LinkedBlockingQueue)))
 
@@ -160,18 +161,21 @@
       (.put q bulk))))
 
 (defn -main [& args]
-  (let [[opts args _] (apply cli args opts)]
-    (if (:version opts)
-      (quit (version))
-      (let [indexer (start-indexer-pool opts)
-            state (ref (merge
-                        opts
-                        {:curr 0
-                         :bytes 0
-                         :indexer indexer
-                         :items []}))
-            parser (xml/make-parser (:url opts) (make-handler state))]
-        (try
-          (.parse parser)
-          (catch Exception e
-            (quit "can't parse: %s" (str e))))))))
+  (try
+    (let [[opts args _] (apply cli args opts)]
+      (if (:version opts)
+        (quit (version))
+        (let [indexer (start-indexer-pool opts)
+              state (ref (merge
+                          opts
+                          {:curr 0
+                           :bytes 0
+                           :indexer indexer
+                           :items []}))
+              parser (xml/make-parser (:url opts) (make-handler state))]
+          (try
+            (.parse parser)
+            (catch Exception e
+              (quit "can't parse: %s" (str e)))))))
+    (catch Exception e
+      (help opts))))
