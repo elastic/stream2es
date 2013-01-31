@@ -10,33 +10,38 @@
   (:import (java.util.concurrent CountDownLatch
                                  LinkedBlockingQueue)))
 
-(def _index
-  "wiki")
-
-(def _type
-  "page")
-
-(def n-indexers
-  2)
-
-(def queue-size
-  10)
-
 (def bulk-bytes
   (* 3 1024 1024))
 
+(def latest-wiki
+  (str "http://download.wikimedia.org"
+       "/enwiki/latest/enwiki-latest-pages-articles.xml.bz2"))
+
 (def opts
-  [["-u" "--url" "Wiki dump locator"
-    :default "http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2"]
-   ["-d" "--docs" "Number of docs to index"
+  [["-b" "--maxbytes" "Bulk size in bytes"
+    :default bulk-bytes
+    :parse-fn #(Integer/parseInt %)]
+   ["-d" "--maxdocs" "Number of docs to index"
     :default 500
+    :parse-fn #(Integer/parseInt %)]
+   ["-i" "--index" "ES index"
+    :default "wiki"]
+   ["-q" "--queue" "Size of the internal bulk queue"
+    :default 20
     :parse-fn #(Integer/parseInt %)]
    ["-s" "--skip" "Skip this many docs before indexing"
     :default 0
     :parse-fn #(Integer/parseInt %)]
+   ["-t" "--type" "ES type"
+    :default "page"]
+   ["-u" "--url" "Wiki dump locator"
+    :default latest-wiki]
    ["-v" "--version" "Print version"
     :flag true
-    :default false]])
+    :default false]
+   ["-w" "--workers" "Number of indexing threads"
+    :default 2
+    :parse-fn #(Integer/parseInt %)]])
 
 (defrecord BulkItem [meta source])
 
@@ -50,7 +55,7 @@
      (println (apply format fmt s))
      (System/exit 0)))
 
-(defn page2item [offset page]
+(defn page2item [_index _type offset page]
   (let [metadoc {:index
                  {:_index _index
                   :_type _type
@@ -69,7 +74,8 @@
      (merge source {:bytes (size-of source)}))))
 
 (defn add-doc [state page]
-  (let [item (page2item (:curr @state) page)]
+  (let [item (page2item (:index @state) (:type @state)
+                        (:curr @state) page)]
     (alter state update-in [:bytes] + (-> item :source :bytes))
     (alter state update-in [:items] conj item)))
 
@@ -91,9 +97,9 @@
       (flush-bulk state))))
 
 (defn continue? [state]
-  (let [{:keys [skip stopafter curr]} @state]
-    (if (pos? stopafter)
-      (< curr (+ skip stopafter))
+  (let [{:keys [skip maxdocs curr]} @state]
+    (if (pos? maxdocs)
+      (< curr (+ skip maxdocs))
       true)))
 
 (defn flush-indexer [state]
@@ -115,8 +121,7 @@
        (want-shutdown state)))))
 
 (defn post [data]
-  (let [url (format "http://localhost:9200/%s/_bulk" _index)]
-    (http/post url {:body data})))
+  (http/post "http://localhost:9200/_bulk" {:body data}))
 
 (defn make-indexable-bulk [items]
   (->> (for [item items]
@@ -135,9 +140,9 @@
       (swap! total + (count bulk))
       (recur q total))))
 
-(defn start-indexer-pool []
-  (let [q (LinkedBlockingQueue. queue-size)
-        latch (CountDownLatch. n-indexers)
+(defn start-indexer-pool [opts]
+  (let [q (LinkedBlockingQueue. (:queue opts))
+        latch (CountDownLatch. (:workers opts))
         total (atom 0)
         disp (fn []
                (index-bulk q total)
@@ -146,7 +151,7 @@
                (.await latch)
                (quit "processed %d docs" @total))]
     ;; start index pool
-    (dotimes [_ n-indexers]
+    (dotimes [_ (:workers opts)]
       (.start (Thread. disp)))
     ;; start lifecycle
     (.start (Thread. kill))
@@ -158,14 +163,13 @@
   (let [[opts args _] (apply cli args opts)]
     (if (:version opts)
       (quit (version))
-      (let [indexer (start-indexer-pool)
-            state (ref {:stopafter (:docs opts)
-                        :maxbytes bulk-bytes
-                        :skip (:skip opts)
-                        :curr 0
-                        :bytes 0
-                        :indexer indexer
-                        :items []})
+      (let [indexer (start-indexer-pool opts)
+            state (ref (merge
+                        opts
+                        {:curr 0
+                         :bytes 0
+                         :indexer indexer
+                         :items []}))
             parser (xml/make-parser (:url opts) (make-handler state))]
         (try
           (.parse parser)
