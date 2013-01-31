@@ -9,7 +9,7 @@ clean:
 package: clean
 	mkdir -p etc
 	echo -n $(VERSION) >etc/version.txt
-	lein bin
+	LEIN_SNAPSHOTS_IN_RELEASE=yes lein bin
 
 release: package
 	s3cmd -c $(S3CREDS) put -P target/$(BIN) $(S3HOME)/$(BIN)

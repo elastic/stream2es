@@ -21,12 +21,16 @@
   (or (type-sizes (type n))
       (unknown-type n)))
 
-(defn vect? [x]
+(defn vector?* [x]
   (or (vector? x)
       (= java.util.Vector (type x))))
 
+(defn list?* [x]
+  (or (list? x)
+      (= java.util.ArrayList (type x))))
+
 (defn linear? [x]
-  (some true? ((juxt sequential? vect? list?) x)))
+  (some true? ((juxt sequential? vector?* list?*) x)))
 
 (defn boolean? [x]
   (= Boolean (type x)))
@@ -42,4 +46,3 @@
       (number? x) (size-of-number x)
       (boolean? x) (type-sizes Boolean)
       :else (unknown-type x)))))
-

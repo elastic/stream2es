@@ -1,13 +1,20 @@
 (ns wiki2es.xml
-  (:import (edu.jhu.nlp.wikipedia PageCallbackHandler
-                                  WikiXMLParserFactory)))
+  (:import (java.net URL MalformedURLException)
+           (org.elasticsearch.river.wikipedia.support
+            PageCallbackHandler
+            WikiXMLParserFactory)))
 
 (defn make-callback [f]
   (reify PageCallbackHandler
     (process [_ page]
       (f page))))
 
-(defn make-parser [loc handler]
-  (doto (WikiXMLParserFactory/getSAXParser loc)
-    (.setPageCallback (make-callback handler))))
+(defn url [s]
+  (try
+    (URL. s)
+    (catch MalformedURLException _
+      (URL. (str "file://" s)))))
 
+(defn make-parser [loc handler]
+  (doto (WikiXMLParserFactory/getSAXParser (url loc))
+    (.setPageCallback (make-callback handler))))

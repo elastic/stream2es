@@ -6,9 +6,8 @@
             :url "http://www.apache.org/licenses/LICENSE-2.0.html"}
   :resource-paths ["etc" "resources"]
   :dependencies [[org.clojure/clojure "1.5.0-RC2"]
-                 ;; hg clone https://bitbucket.org/dfdeshom/wikixmlj
-                 ;;   && mvn install
-                 [edu.jhu.nlp.wikipedia/wikixmlj "r-45"]
+                 [org.elasticsearch/elasticsearch-river-wikipedia
+                  "1.2.0-SNAPSHOT"]
                  [cheshire "5.0.1"]
                  [clj-http "0.6.3"]]
   :plugins [[lein-bin "0.3.0"]]
