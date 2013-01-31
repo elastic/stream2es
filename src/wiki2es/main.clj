@@ -2,6 +2,7 @@
   (:gen-class)
   (:require [cheshire.core :as json]
             [clj-http.client :as http]
+            [clojure.tools.cli :refer [cli]]
             [wiki2es.log :as log]
             [wiki2es.size :refer [size-of]]
             [wiki2es.version :refer [version]]
@@ -23,6 +24,19 @@
 
 (def bulk-bytes
   (* 3 1024 1024))
+
+(def opts
+  [["-u" "--url" "Wiki dump locator"
+    :default "http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2"]
+   ["-d" "--docs" "Number of docs to index"
+    :default 500
+    :parse-fn #(Integer/parseInt %)]
+   ["-s" "--skip" "Skip this many docs before indexing"
+    :default 0
+    :parse-fn #(Integer/parseInt %)]
+   ["-v" "--version" "Print version"
+    :flag true
+    :default false]])
 
 (defrecord BulkItem [meta source])
 
@@ -141,19 +155,19 @@
       (.put q bulk))))
 
 (defn -main [& args]
-  (let [[bz2 stopafter skip] args]
-    (if bz2
+  (let [[opts args _] (apply cli args opts)]
+    (if (:version opts)
+      (quit (version))
       (let [indexer (start-indexer-pool)
-            state (ref {:stopafter (Integer/parseInt (or stopafter "-1"))
+            state (ref {:stopafter (:docs opts)
                         :maxbytes bulk-bytes
-                        :skip (Integer/parseInt (or skip "0"))
+                        :skip (:skip opts)
                         :curr 0
                         :bytes 0
                         :indexer indexer
                         :items []})
-            parser (xml/make-parser bz2 (make-handler state))]
+            parser (xml/make-parser (:url opts) (make-handler state))]
         (try
           (.parse parser)
           (catch Exception e
-            (quit "can't parse: %s" (str e)))))
-      (quit (version)))))
+            (quit "can't parse: %s" (str e))))))))
