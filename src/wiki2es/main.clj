@@ -19,10 +19,10 @@
        "/enwiki/latest/enwiki-latest-pages-articles.xml.bz2"))
 
 (def opts
-  [["-b" "--maxbytes" "Bulk size in bytes"
+  [["-b" "--bulk-bytes" "Bulk size in bytes"
     :default bulk-bytes
     :parse-fn #(Integer/parseInt %)]
-   ["-d" "--maxdocs" "Number of docs to index"
+   ["-d" "--max-docs" "Number of docs to index"
     :default 500
     :parse-fn #(Integer/parseInt %)]
    ["-i" "--index" "ES index"
@@ -93,14 +93,14 @@
     (alter state assoc :items [])))
 
 (defn maybe-index [state]
-  (let [{:keys [bytes maxbytes]} @state]
-    (when (> bytes maxbytes)
+  (let [{:keys [bytes bulk-bytes]} @state]
+    (when (> bytes bulk-bytes)
       (flush-bulk state))))
 
 (defn continue? [state]
-  (let [{:keys [skip maxdocs curr]} @state]
-    (if (pos? maxdocs)
-      (< curr (+ skip maxdocs))
+  (let [{:keys [skip max-docs curr]} @state]
+    (if (pos? max-docs)
+      (< curr (+ skip max-docs))
       true)))
 
 (defn flush-indexer [state]
@@ -178,4 +178,7 @@
             (catch Exception e
               (quit "can't parse: %s" (str e)))))))
     (catch Exception e
+      (println (.getMessage e))
+      (println)
+      (println "Opts:")
       (help opts))))
