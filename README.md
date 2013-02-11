@@ -65,6 +65,12 @@ change it.
         --version       Print version (default: false)
         --workers       Number of indexing threads (default: 2)
 
+I strongly suggest increasing the `refresh_interval` to get better
+indexing performance.
+
+        curl -s -XPUT localhost:9200/wiki/_settings -d '{"refresh_interval":"2m"}'; echo
+
+
 # Contributing
 
 wiki2es is written in Clojure.  You'll need leiningen 2.0+ to build.
