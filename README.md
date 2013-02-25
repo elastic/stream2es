@@ -9,61 +9,72 @@ For when you need a little more control than
 
 ## Quick Start
 
-By default, `stream2es` indexes 500 pages from the latest article dump.
+By default, `stream2es` indexes the latest Wikipedia article dump.
 
         % ./stream2es
-        >--> push bulk: items:141 bytes:3169452 first-id:10
-        <--< pull bulk: 141 items
-        >--> push bulk: items:90 bytes:3263022 first-id:661
-        <--< pull bulk: 90 items
-        <--< pull bulk: 105 items
-        >--> push bulk: items:105 bytes:3169114 first-id:807
-        >--> push bulk: items:93 bytes:3220726 first-id:963
-        <--< pull bulk: 93 items
-        >--> push bulk: items:71 bytes:2273986 first-id:1134
-        <--< pull bulk: 71 items
-        processed 500 docs
+        streaming wiki from http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
+        <--< 141 items; first-id 10
+        >--> 141 items; 3149564 bytes; first-id 10
+        <--< 90 items; first-id 661
+        >--> 90 items; 3274342 bytes; first-id 661
+        >--> 103 items; 3146938 bytes; first-id 807
+        <--< 103 items; first-id 807
+        >--> 94 items; 3195832 bytes; first-id 959
+        <--< 94 items; first-id 959
+        >--> 95 items; 3180746 bytes; first-id 1132
+        <--< 95 items; first-id 1132
+
 
 Index 100 Wikipedia docs *starting at* document 100.
 
-        % ./stream2es --max-docs 100 --skip 100
-        >--> push bulk: items:91 bytes:3164018 first-id:593
-        <--< pull bulk: 91 items
-        <--< pull bulk: 9 items
-        >--> push bulk: items:9 bytes:345440 first-id:740
-        processed 100 docs
+        ./stream2es wiki --max-docs 100 --skip 100
+        streaming wiki from http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
+        >--> 91 items; 3182370 bytes; first-id 593
+        <--< 91 items; first-id 593
+        <--< 9 items; first-id 740
+        >--> 9 items; 348052 bytes; first-id 740
+        flushing index queue
+        streamed 200 indexed 100
 
 If you're at a café or want to use a local copy of the dump, supply `--url`:
 
-        % ./stream2es --max-docs 5 --url /d/data/enwiki-20121201-pages-articles.xml.bz2
-        <--< pull bulk: 5 items
-        >--> push bulk: items:5 bytes:109426 first-id:10
-        processed 5 docs
+        % ./stream2es wiki --max-docs 5 --url /d/data/enwiki-20121201-pages-articles.xml.bz2
 
-What's this push/pull output?  stream2es starts up indexing threads that
-pull bulk requests concurrently from an internal queue.  A page
-callback may block if it has to wait for a spot.
-
-The line `>--> push bulk: items:92 bytes:3153144 first-id:593` means
-that a bulk request with 92 docs, of roughly 3153144 bytes in size,
-with first doc ID of 593 has been enqueued.  `<--< pull bulk: 92 items`
-indicates that the bulk request has been pulled from the queue
-and has been submitted for indexing to ES.
-
-The bulk size defaults to 3MiB but you can supply `--bulk-bytes` to
-change it.
+stream2es streams into a buffer and publishes bulk requests in a
+queue.  Indexing threads pull those bulk requests concurrently.  A
+page callback may block if it has to wait for a spot.  The log lines
+with arrows refer to a bulk request being published on the indexing
+queue, and removed when ES has acknowledged receipt.
 
 ## Options
 
-        --index         ES index (default: wiki)
-        --bulk-bytes    Bulk size in bytes (default: 3145728)
-        --max-docs      Number of docs to index (default: 500)
-        --queue         Size of the internal bulk queue (default: 20)
-        --skip          Skip this many docs before indexing (default: 0)
-        --type          ES type (default: page)
-        --url           Wiki dump locator (default: http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2)
-        --version       Print version (default: false)
-        --workers       Number of indexing threads (default: 2)
+        Usage: stream2es [CMD] [OPTS]
+        
+        Available commands: wiki, twitter
+        
+        Common opts:
+        -h --help       Display help (default: false)
+        -d --max-docs   Number of docs to index (default: -1)
+        -s --skip       Skip this many docs before indexing (default: 0)
+        -v --version    Print version (default: false)
+        -w --workers    Number of indexing threads (default: 2)
+        
+        Wikipedia opts (default):
+        -b --bulk-bytes Bulk size in bytes (default: 3145728)
+        -i --index      ES index (default: "wiki")
+        -q --queue      Size of the internal bulk queue (default: 40)
+           --stream-buffer Buffer up to this many tweets (default: 1000)
+        -t --type       ES type (default: "page")
+        -u --url        Wiki dump locator (default: "http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2")
+        
+        Twitter opts:
+        -b --bulk-bytes Bulk size in bytes (default: 102400)
+        -i --index      ES index (default: "twitter")
+           --pass       Twitter password (default: "")
+        -q --queue      Size of the internal bulk queue (default: 1000)
+           --stream-buffer Buffer up to this many tweets (default: 1000)
+        -t --type       ES document type (default: "status")
+           --user       Twitter username (default: "")
 
 I strongly suggest increasing the `refresh_interval` to get better
 indexing performance.
