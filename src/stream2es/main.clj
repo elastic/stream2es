@@ -3,8 +3,7 @@
   (:require [cheshire.core :as json]
             [clj-http.client :as http]
             [clojure.tools.cli :refer [cli]]
-            [clojure.tools.logging :as log2]
-            [stream2es.log :as log]
+            [clojure.tools.logging :as log]
             [stream2es.size :refer [size-of]]
             [stream2es.version :refer [version]]
             [stream2es.wiki :as wiki]
@@ -58,7 +57,7 @@
    (let [itemct (count (:items @state))
          items (:items @state)]
      (when (pos? itemct)
-       (log2/info
+       (log/info
         (format ">--> %d items; %d bytes; first-id %s"
                 itemct (:bytes @state)
                 (-> items first :meta :index :_id)))
@@ -72,23 +71,23 @@
       (flush-bulk state))))
 
 (defn continue? [{:keys [skip max-docs curr]}]
-  (log2/trace 'skip skip 'max-docs max-docs 'curr curr)
+  (log/trace 'skip skip 'max-docs max-docs 'curr curr)
   (if (pos? max-docs)
     (< curr (+ skip max-docs))
     true))
 
 (defn flush-indexer [state]
-  (log2/info "flushing index queue")
+  (log/info "flushing index queue")
   (dotimes [_ (:workers @state)]
     ((:indexer @state) :stop)))
 
 (defn want-shutdown [state]
-  (log2/debug "want shutdown")
+  (log/debug "want shutdown")
   (flush-bulk state)
   (flush-indexer state))
 
 (defn post [data]
-  (log2/trace "POSTing" (count data) "bytes")
+  (log/trace "POSTing" (count data) "bytes")
   (http/post "http://localhost:9200/_bulk" {:body data}))
 
 (defn make-indexable-bulk [items]
@@ -103,10 +102,10 @@
   (let [bulk (.take q)]
     (when-not (= :stop bulk)
       (when (and (sequential? bulk) (pos? (count bulk)))
-        (log2/info "<--<" (count bulk)
-                   "items; first-id" (-> bulk first :meta :index :_id))
+        (log/info "<--<" (count bulk)
+                  "items; first-id" (-> bulk first :meta :index :_id))
         (post (make-indexable-bulk bulk)))
-      (log2/debug "adding indexed total" @total "+" (count bulk))
+      (log/debug "adding indexed total" @total "+" (count bulk))
       (swap! total + (count bulk))
       (recur q total))))
 
@@ -116,13 +115,13 @@
         total (atom 0)
         disp (fn []
                (index-bulk q total)
-               (log2/debug "waiting for POSTs to finish")
+               (log/debug "waiting for POSTs to finish")
                (.countDown latch))
         lifecycle (fn []
                     (.await latch)
                     (dosync
                      (alter state update-in [:total :indexed] + @total))
-                    (log2/debug "done indexing")
+                    (log/debug "done indexing")
                     ((:indexer-notifier @state)))]
     ;; start index pool
     (dotimes [n (:workers @state)]
@@ -151,7 +150,7 @@
                      (recur)))))
         lifecycle (fn []
                     (.await latch)
-                    (log2/debug "done collecting")
+                    (log/debug "done collecting")
                     ((:collector-notifier @state)))]
     (.start (Thread. disp "stream dispatcher"))
     (.start (Thread. lifecycle "stream service"))
@@ -200,9 +199,9 @@
         indexer-notifier #(.countDown indexer-latch)
         indexer (start-indexer-pool state)
         kill (fn []
-               (log2/debug "waiting for collectors")
+               (log/debug "waiting for collectors")
                (.await collector-latch)
-               (log2/debug "waiting for indexers")
+               (log/debug "waiting for indexers")
                (.await indexer-latch)
                (quit "streamed %d indexed %d"
                      (-> @state :curr)
@@ -256,6 +255,9 @@
        (let [state (start! (assoc optmap
                              :cmd cmd))]
          (try
+           (log/info
+            (format "streaming %s from %s"
+                    (:cmd @state) (:url @state "twitter")))
            (stream! state)
            (catch Exception e
              (quit "stream error: %s" (str e)))))))
