@@ -1,7 +1,7 @@
-(defproject org.elasticsearch/wiki2es
+(defproject org.elasticsearch/stream2es
   (-> "etc/version.txt" slurp .trim)
-  :description "Index wikipedia dump into ES."
-  :url "http://github.com/elasticsearch/elasticsearch/wiki2es"
+  :description "Index streams into ES."
+  :url "http://github.com/elasticsearch/elasticsearch/stream2es"
   :license {:name "Apache 2"
             :url "http://www.apache.org/licenses/LICENSE-2.0.html"}
   :resource-paths ["etc" "resources"]
@@ -15,4 +15,4 @@
                  [org.twitter4j/twitter4j-stream "3.0.3"]
                  [slingshot "0.10.3"]]
   :plugins [[lein-bin "0.3.0"]]
-  :main wiki2es.main)
+  :main stream2es.main)

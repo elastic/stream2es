@@ -1,4 +1,4 @@
-(ns wiki2es.version
+(ns stream2es.version
   (:require [clojure.java.io :as io]))
 
 (defn version []

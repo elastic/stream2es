@@ -1,15 +1,15 @@
-(ns wiki2es.main
+(ns stream2es.main
   (:gen-class)
   (:require [cheshire.core :as json]
             [clj-http.client :as http]
             [clojure.tools.cli :refer [cli]]
             [clojure.tools.logging :as log2]
-            [wiki2es.log :as log]
-            [wiki2es.size :refer [size-of]]
-            [wiki2es.version :refer [version]]
-            [wiki2es.wiki :as wiki]
-            [wiki2es.twitter :as twitter]
-            [wiki2es.help :as help]
+            [stream2es.log :as log]
+            [stream2es.size :refer [size-of]]
+            [stream2es.version :refer [version]]
+            [stream2es.wiki :as wiki]
+            [stream2es.twitter :as twitter]
+            [stream2es.help :as help]
             [slingshot.slingshot :refer [try+ throw+]])
   (:import (clojure.lang ExceptionInfo)
            (java.util.concurrent CountDownLatch
@@ -216,7 +216,7 @@
 
 (defn cmd-specs [cmd]
   (try
-    (->> (format "wiki2es.%s/%s" cmd 'opts)
+    (->> (format "stream2es.%s/%s" cmd 'opts)
          symbol
          find-var
          deref)
@@ -233,7 +233,7 @@
   (with-out-str
     (println "Copyright 2013 Elasticsearch")
     (println)
-    (println "Usage: wiki2es [CMD] [OPTS]")
+    (println "Usage: stream2es [CMD] [OPTS]")
     (println)
     (println "Available commands: wiki, twitter")
     (println)

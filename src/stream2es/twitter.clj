@@ -1,4 +1,4 @@
-(ns wiki2es.twitter
+(ns stream2es.twitter
   (:import (twitter4j.conf ConfigurationBuilder)
            (twitter4j TwitterStreamFactory StatusListener)))
 

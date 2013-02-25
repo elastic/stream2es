@@ -1,4 +1,4 @@
-(ns wiki2es.help
+(ns stream2es.help
   (:require [clojure.tools.cli :as cli]))
 
 (defn line-up-switches [sws]

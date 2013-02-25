@@ -1,4 +1,4 @@
-(ns wiki2es.size
+(ns stream2es.size
   (:import (java.util Date)))
 
 (def type-sizes

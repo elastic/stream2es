@@ -1,4 +1,4 @@
-(ns wiki2es.log)
+(ns stream2es.log)
 
 (def logger
   (agent nil))

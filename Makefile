@@ -1,7 +1,7 @@
-NAME = wiki2es
+NAME = stream2es
 VERSION = $(shell git ver)
 BIN = $(NAME)-$(VERSION)
-S3HOME = s3://download.elasticsearch.org/wiki2es
+S3HOME = s3://download.elasticsearch.org/stream2es
 
 clean:
 	lein clean

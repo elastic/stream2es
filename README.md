@@ -1,17 +1,17 @@
-# wiki2es
+# stream2es
 
 For when you need a little more control than
 [elasticsearch-river-wikipedia](https://github.com/elasticsearch/elasticsearch-river-wikipedia).
 
 ## Install
 
-        % curl -O download.elasticsearch.org/wiki2es/wiki2es; chmod +x wiki2es
+        % curl -O download.elasticsearch.org/stream2es/stream2es; chmod +x stream2es
 
 ## Quick Start
 
-By default, `wiki2es` indexes 500 pages from the latest article dump.
+By default, `stream2es` indexes 500 pages from the latest article dump.
 
-        % ./wiki2es
+        % ./stream2es
         >--> push bulk: items:141 bytes:3169452 first-id:10
         <--< pull bulk: 141 items
         >--> push bulk: items:90 bytes:3263022 first-id:661
@@ -26,7 +26,7 @@ By default, `wiki2es` indexes 500 pages from the latest article dump.
 
 Index 100 Wikipedia docs *starting at* document 100.
 
-        % ./wiki2es --max-docs 100 --skip 100
+        % ./stream2es --max-docs 100 --skip 100
         >--> push bulk: items:91 bytes:3164018 first-id:593
         <--< pull bulk: 91 items
         <--< pull bulk: 9 items
@@ -35,12 +35,12 @@ Index 100 Wikipedia docs *starting at* document 100.
 
 If you're at a café or want to use a local copy of the dump, supply `--url`:
 
-        % ./wiki2es --max-docs 5 --url /d/data/enwiki-20121201-pages-articles.xml.bz2
+        % ./stream2es --max-docs 5 --url /d/data/enwiki-20121201-pages-articles.xml.bz2
         <--< pull bulk: 5 items
         >--> push bulk: items:5 bytes:109426 first-id:10
         processed 5 docs
 
-What's this push/pull output?  wiki2es starts up indexing threads that
+What's this push/pull output?  stream2es starts up indexing threads that
 pull bulk requests concurrently from an internal queue.  A page
 callback may block if it has to wait for a spot.
 
@@ -73,10 +73,10 @@ indexing performance.
 
 # Contributing
 
-wiki2es is written in Clojure.  You'll need leiningen 2.0+ to build.
+stream2es is written in Clojure.  You'll need leiningen 2.0+ to build.
 
         % lein bin
-        % target/wiki2es /path/to/dump
+        % target/stream2es /path/to/dump
 
 # License
 
