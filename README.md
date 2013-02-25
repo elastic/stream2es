@@ -87,7 +87,7 @@ indexing performance.
 stream2es is written in Clojure.  You'll need leiningen 2.0+ to build.
 
         % lein bin
-        % target/stream2es /path/to/dump
+        % target/stream2es
 
 # License
 
