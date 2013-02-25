@@ -1,4 +1,5 @@
-(ns wiki2es.size)
+(ns wiki2es.size
+  (:import (java.util Date)))
 
 (def type-sizes
   {Boolean 1/8
@@ -8,7 +9,8 @@
    Integer 4
    Float 4
    Long 8
-   Double 8})
+   Double 8
+   Date 8})
 
 (defn unknown-type [x]
   (throw
@@ -35,6 +37,9 @@
 (defn boolean? [x]
   (= Boolean (type x)))
 
+(defn object? [x]
+  (instance? Object x))
+
 (defn size-of [x]
   (Math/round
    (float
@@ -44,5 +49,5 @@
       (linear? x) (reduce + (map size-of x))
       (string? x) (* (type-sizes Character) (count x))
       (number? x) (size-of-number x)
-      (boolean? x) (type-sizes Boolean)
+      (object? x) (or (type-sizes (type x)) (unknown-type x))
       :else (unknown-type x)))))
