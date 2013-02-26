@@ -2,6 +2,7 @@
   (:gen-class)
   (:require [cheshire.core :as json]
             [clj-http.client :as http]
+            [clojure.java.io :as io]
             [clojure.tools.cli :refer [cli]]
             [clojure.tools.logging :as log]
             [stream2es.size :refer [size-of]]
@@ -28,6 +29,7 @@
    ["-w" "--workers" "Number of indexing threads"
     :default indexing-threads
     :parse-fn #(Integer/parseInt %)]
+   ["--tee" "Save bulk request payloads as files in path"]
    ["-h" "--help" "Display help" :flag true :default false]])
 
 (defrecord BulkItem [meta source])
@@ -90,6 +92,13 @@
   (log/trace "POSTing" (count data) "bytes")
   (http/post "http://localhost:9200/_bulk" {:body data}))
 
+(defn spit-mkdirs [path name data]
+  (when path
+    (let [f (io/file path name)]
+      (log/info "save" (str f) (count data) "chars")
+      (.mkdirs (io/file path))
+      (spit f data))))
+
 (defn make-indexable-bulk [items]
   (->> (for [item items]
          (str (json/encode (:meta item))
@@ -98,23 +107,28 @@
               "\n"))
        (apply str)))
 
-(defn index-bulk [q total]
+(defn index-bulk [q total opts]
   (let [bulk (.take q)]
     (when-not (= :stop bulk)
       (when (and (sequential? bulk) (pos? (count bulk)))
-        (log/info "<--<" (count bulk)
-                  "items; first-id" (-> bulk first :meta :index :_id))
-        (post (make-indexable-bulk bulk)))
+        (let [first-id (-> bulk first :meta :index :_id)
+              idxbulk (make-indexable-bulk bulk)]
+          (log/info "<--<" (count bulk) "items; first-id" first-id)
+          (post idxbulk)
+          (spit-mkdirs
+           (:tee opts)
+           (str first-id ".bulk")
+           idxbulk)))
       (log/debug "adding indexed total" @total "+" (count bulk))
       (swap! total + (count bulk))
-      (recur q total))))
+      (recur q total opts))))
 
 (defn start-indexer-pool [state]
   (let [q (LinkedBlockingQueue. (:queue @state))
         latch (CountDownLatch. (:workers @state))
         total (atom 0)
         disp (fn []
-               (index-bulk q total)
+               (index-bulk q total @state)
                (log/debug "waiting for POSTs to finish")
                (.countDown latch))
         lifecycle (fn []
@@ -245,27 +259,27 @@
 
 (defn -main [& args]
   (try+
-   (let [cmd (symbol (or (first args) 'wiki))
-         main-plus-cmd-specs (concat opts (cmd-specs cmd))
-         [optmap args _] (parse-opts args main-plus-cmd-specs)]
-     (when (:help optmap)
-       (quit (help)))
-     (if (:version optmap)
-       (quit (version))
-       (let [state (start! (assoc optmap
-                             :cmd cmd))]
-         (try
-           (log/info
-            (format "streaming %s from %s"
-                    (:cmd @state) (:url @state "twitter")))
-           (stream! state)
-           (catch Exception e
-             (quit "stream error: %s" (str e)))))))
-   (catch [:type ::badcmd] _
-     (quit (help)))
-   (catch [:type ::badarg] _
-     (let [msg (format "%s\n\n%s" (:message &throw-context) (help))]
-       (quit msg)))
-   (catch Object _
-     (quit "unexpected exception: %s"
-           (:throwable &throw-context)))))
+    (let [cmd (symbol (or (first args) 'wiki))
+          main-plus-cmd-specs (concat opts (cmd-specs cmd))
+          [optmap args _] (parse-opts args main-plus-cmd-specs)]
+      (when (:help optmap)
+        (quit (help)))
+      (if (:version optmap)
+        (quit (version))
+        (let [state (start! (assoc optmap
+                              :cmd cmd))]
+          (try
+            (log/info
+             (format "streaming %s from %s"
+                     (:cmd @state) (:url @state "twitter")))
+            (stream! state)
+            (catch Exception e
+              (quit "stream error: %s" (str e)))))))
+    (catch [:type ::badcmd] _
+      (quit (help)))
+    (catch [:type ::badarg] _
+      (let [msg (format "%s\n\n%s" (:message &throw-context) (help))]
+        (quit msg)))
+    (catch Object _
+      (quit "unexpected exception: %s"
+            (:throwable &throw-context)))))
