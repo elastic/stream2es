@@ -1,11 +1,12 @@
-(ns stream2es.twitter
+(ns stream2es.stream.twitter
+  (:require [stream2es.stream :as stream])
   (:import (twitter4j.conf ConfigurationBuilder)
-           (twitter4j TwitterStreamFactory StatusListener)))
+           (twitter4j TwitterStreamFactory StatusListener Status)))
 
 (def bulk-bytes
   (* 1024 100))
 
-(def opts
+(defmethod stream/cmd-specs 'twitter [_]
   [["-b" "--bulk-bytes" "Bulk size in bytes"
     :default bulk-bytes
     :parse-fn #(Integer/parseInt %)]
@@ -36,7 +37,7 @@
     (.setUser user)
     (.setPassword pass)))
 
-(defn make-source [status]
+(defmethod stream/make-source Status [status]
   (let [u (.getUser status)
         place (.getPlace status)
         geo (.getGeoLocation status)]
@@ -67,9 +68,10 @@
         {:lat (.getLatitude geo)
          :lon (.getLongitude geo)}}))))
 
-(defn make-stream [user pass handler]
+(defmethod stream/make-stream 'twitter [_ {:keys [user pass]} handler]
   (let [conf (.build (make-configuration user pass))
         stream (doto (-> (TwitterStreamFactory. conf) .getInstance)
                  (.addListener (make-callback handler)))]
     {:run #(.sample (:stream %))
      :stream stream}))
+

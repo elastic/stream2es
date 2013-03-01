@@ -1,5 +1,7 @@
 (ns stream2es.main
   (:gen-class)
+  (:require [stream2es.stream.twitter]
+            [stream2es.stream.wiki])
   (:require [cheshire.core :as json]
             [clj-http.client :as http]
             [clojure.java.io :as io]
@@ -7,8 +9,7 @@
             [clojure.tools.logging :as log]
             [stream2es.size :refer [size-of]]
             [stream2es.version :refer [version]]
-            [stream2es.wiki :as wiki]
-            [stream2es.twitter :as twitter]
+            [stream2es.stream :as stream]
             [stream2es.help :as help]
             [slingshot.slingshot :refer [try+ throw+]])
   (:import (clojure.lang ExceptionInfo)
@@ -196,9 +197,9 @@
     (fn [stream-object]
       (.put q stream-object))))
 
-(defn make-object-processor [state make-source]
+(defn make-object-processor [state]
   (fn [stream-object]
-    (let [source (make-source stream-object)]
+    (let [source (stream/make-source stream-object)]
       (dosync
        (let [item (source2item
                    (:index @state)
@@ -208,22 +209,15 @@
          (alter state update-in
                 [:bytes] + (-> item :source :bytes))
          (alter state update-in
-                [:total :streamed :bytes] + (-> item :source :bytes))
+                [:total :streamed :bytes]
+                + (-> source .getBytes))
          (alter state update-in
                 [:items] conj item))))))
 
 (defn stream! [state]
-  (let [make-source (condp = (:cmd @state)
-                      'twitter twitter/make-source
-                      'wiki wiki/make-source)
-        process (make-object-processor state make-source)
+  (let [process (make-object-processor state)
         publish (start-doc-stream state process)
-        stream-handler (condp = (:cmd @state)
-                         'twitter (twitter/make-stream
-                                   (:user @state)
-                                   (:pass @state)
-                                   publish)
-                         'wiki (wiki/make-stream (:url @state) publish))]
+        stream-handler (stream/make-stream (:cmd @state) @state publish)]
     ((:run stream-handler) stream-handler)))
 
 (defn start! [opts]
@@ -260,7 +254,7 @@
 
 (defn cmd-specs [cmd]
   (try
-    (->> (format "stream2es.%s/%s" cmd 'opts)
+    (->> (format "stream2es.stream.%s/%s" cmd 'opts)
          symbol
          find-var
          deref)
@@ -284,14 +278,14 @@
     (println "Common opts:")
     (println (help/help opts))
     (println "Wikipedia opts (default):")
-    (println (help/help wiki/opts))
+    (println (help/help stream/cmd-specs 'wiki))
     (println "Twitter opts:")
-    (print (help/help twitter/opts))))
+    (print (help/help stream/cmd-specs 'twitter))))
 
 (defn -main [& args]
   (try+
     (let [cmd (symbol (or (first args) 'wiki))
-          main-plus-cmd-specs (concat opts (cmd-specs cmd))
+          main-plus-cmd-specs (concat opts (stream/cmd-specs cmd))
           [optmap args _] (parse-opts args main-plus-cmd-specs)]
       (when (:help optmap)
         (quit (help)))

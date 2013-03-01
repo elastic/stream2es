@@ -1,4 +1,4 @@
-(ns stream2es.wiki
+(ns stream2es.stream.wiki
   (:import (java.net URL MalformedURLException)
            (org.elasticsearch.river.wikipedia.support
             PageCallbackHandler
