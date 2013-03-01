@@ -59,10 +59,10 @@
    (let [itemct (count (:items @state))
          items (:items @state)]
      (when (pos? itemct)
-       (log/info
-        (format ">--> %d items; %d bytes; first-id %s"
-                itemct (:bytes @state)
-                (-> items first :meta :index :_id)))
+       #_(log/info
+          (format ">--> %d items; %d bytes; first-id %s"
+                  itemct (:bytes @state)
+                  (-> items first :meta :index :_id)))
        ((:indexer @state) items)
        (alter state assoc :bytes 0)
        (alter state assoc :items [])))))
@@ -72,11 +72,16 @@
     (when (> bytes bulk-bytes)
       (flush-bulk state))))
 
-(defn continue? [{:keys [skip max-docs curr]}]
-  (log/trace 'skip skip 'max-docs max-docs 'curr curr)
-  (if (pos? max-docs)
-    (< curr (+ skip max-docs))
-    true))
+(defn continue? [state]
+  (let [curr (get-in @state [:total :streamed :docs])
+        {:keys [skip max-docs]} @state]
+    (log/trace 'skip skip 'max-docs max-docs 'curr curr)
+    (if (pos? max-docs)
+      (< curr (+ skip max-docs))
+      true)))
+
+(defn skip? [state]
+  (>= (:skip @state) (get-in @state [:total :streamed :docs])))
 
 (defn flush-indexer [state]
   (log/info "flushing index queue")
@@ -89,7 +94,7 @@
   (flush-indexer state))
 
 (defn post [data]
-  (log/trace "POSTing" (count data) "bytes")
+  (log/trace "POSTing" (count data) "chars")
   (http/post "http://localhost:9200/_bulk" {:body data}))
 
 (defn spit-mkdirs [path name data]
@@ -107,34 +112,53 @@
               "\n"))
        (apply str)))
 
-(defn index-bulk [q total opts]
+(defn index-status [id bulk-count bulk-bytes state]
+  (let [upmillis (- (System/currentTimeMillis) (:started-at @state))
+        upsecs (float (/ upmillis 1e3))
+        index-doc-rate (/ (get-in @state [:total :indexed :docs]) upsecs)
+        index-kbyte-rate (/
+                          (/ (get-in @state [:total :indexed :bytes]) 1024)
+                          upsecs)
+        stream-doc-rate (/ (get-in @state [:total :streamed :docs]) upsecs)
+        stream-kbyte-rate (/
+                           (/ (get-in @state [:total :streamed :bytes]) 1024)
+                           upsecs)
+        s (format "%.3f %.1fd/s %.1fK/s %.1fd/s %.1fK/s %d/%d/%s"
+                  upsecs stream-doc-rate stream-kbyte-rate
+                  index-doc-rate index-kbyte-rate
+                  bulk-count bulk-bytes id)]
+    (log/info s)))
+
+(defn index-bulk [q state]
   (let [bulk (.take q)]
     (when-not (= :stop bulk)
       (when (and (sequential? bulk) (pos? (count bulk)))
         (let [first-id (-> bulk first :meta :index :_id)
-              idxbulk (make-indexable-bulk bulk)]
-          (log/info "<--<" (count bulk) "items; first-id" first-id)
+              idxbulk (make-indexable-bulk bulk)
+              bulk-bytes (reduce + (map #(get-in % [:source :bytes]) bulk))]
           (post idxbulk)
+          (dosync
+           (alter state update-in [:total :indexed :docs] + (count bulk))
+           (alter state update-in [:total :indexed :bytes] + bulk-bytes))
+          (index-status first-id (count bulk) bulk-bytes state)
           (spit-mkdirs
-           (:tee opts)
+           (:tee @state)
            (str first-id ".bulk")
            idxbulk)))
-      (log/debug "adding indexed total" @total "+" (count bulk))
-      (swap! total + (count bulk))
-      (recur q total opts))))
+      (log/debug "adding indexed total"
+                 (get-in @state [:total :indexed :docs]) "+" (count bulk))
+      (recur q state))))
 
 (defn start-indexer-pool [state]
   (let [q (LinkedBlockingQueue. (:queue @state))
         latch (CountDownLatch. (:workers @state))
         total (atom 0)
         disp (fn []
-               (index-bulk q total @state)
+               (index-bulk q state)
                (log/debug "waiting for POSTs to finish")
                (.countDown latch))
         lifecycle (fn []
                     (.await latch)
-                    (dosync
-                     (alter state update-in [:total :indexed] + @total))
                     (log/debug "done indexing")
                     ((:indexer-notifier @state)))]
     ;; start index pool
@@ -151,14 +175,14 @@
         latch (CountDownLatch. 1)
         disp (fn []
                (let [obj (.take q)]
-                 (if-not (continue? @state)
+                 (if-not (continue? state)
                    (do
                      (want-shutdown state)
                      (.countDown latch))
                    (do
                      (dosync
-                      (alter state update-in [:curr] inc)
-                      (when (> (:curr @state) (:skip @state))
+                      (alter state update-in [:total :streamed :docs] inc)
+                      (when-not (skip? state)
                         (process obj)
                         (maybe-index state)))
                      (recur)))))
@@ -179,10 +203,12 @@
        (let [item (source2item
                    (:index @state)
                    (:type @state)
-                   (:curr @state)
+                   (get-in @state [:total :streamed :docs])
                    source)]
          (alter state update-in
                 [:bytes] + (-> item :source :bytes))
+         (alter state update-in
+                [:total :streamed :bytes] + (-> item :source :bytes))
          (alter state update-in
                 [:items] conj item))))))
 
@@ -203,10 +229,14 @@
 (defn start! [opts]
   (let [state (ref
                (merge opts
-                      {:curr 0
+                      {:started-at (System/currentTimeMillis)
+                       :curr 0
                        :bytes 0
                        :items []
-                       :total {:indexed 0}}))
+                       :total {:indexed {:docs 0
+                                         :bytes 0}
+                               :streamed {:docs 0
+                                          :bytes 0}}}))
         collector-latch (CountDownLatch. 1)
         indexer-latch (CountDownLatch. 1)
         collector-notifier #(.countDown collector-latch)
@@ -217,9 +247,10 @@
                (.await collector-latch)
                (log/debug "waiting for indexers")
                (.await indexer-latch)
-               (quit "streamed %d indexed %d"
+               (quit "streamed %d indexed docs %d indexed bytes %d"
                      (-> @state :curr)
-                     (-> @state :total :indexed)))]
+                     (-> @state :total :indexed :docs)
+                     (-> @state :total :indexed :bytes)))]
     (.start (Thread. kill "lifecycle"))
     (dosync
      (alter state assoc :collector-notifier collector-notifier)
