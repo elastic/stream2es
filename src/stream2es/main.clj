@@ -12,6 +12,7 @@
             [stream2es.version :refer [version]]
             [stream2es.stream :as stream]
             [stream2es.help :as help]
+            [stream2es.util.time :as time]
             [slingshot.slingshot :refer [try+ throw+]])
   (:import (clojure.lang ExceptionInfo)
            (java.util.concurrent CountDownLatch
@@ -124,8 +125,8 @@
         stream-kbyte-rate (/
                            (/ (get-in @state [:total :streamed :bytes]) 1024)
                            upsecs)
-        s (format "%.3f %.1fd/s %.1fK/s %.1fd/s %.1fK/s %d/%d/%s"
-                  upsecs stream-doc-rate stream-kbyte-rate
+        s (format "%s %.1fd/s %.1fK/s %.1fd/s %.1fK/s %d/%d/%s"
+                  (time/minsecs upsecs) stream-doc-rate stream-kbyte-rate
                   index-doc-rate index-kbyte-rate
                   bulk-count bulk-bytes id)]
     (log/info s)))
