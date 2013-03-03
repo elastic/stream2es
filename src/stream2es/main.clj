@@ -124,12 +124,13 @@
         stream-doc-rate (/ (get-in @state [:total :streamed :docs]) upsecs)
         stream-kbyte-rate (/
                            (/ (get-in @state [:total :streamed :bytes]) 1024)
-                           upsecs)
-        s (format "%s %.1fd/s %.1fK/s %.1fd/s %.1fK/s %d/%d/%s"
-                  (time/minsecs upsecs) stream-doc-rate stream-kbyte-rate
-                  index-doc-rate index-kbyte-rate
-                  bulk-count bulk-bytes id)]
-    (log/info s)))
+                           upsecs)]
+    (log/info
+     (format "%s %.1fd/s %.1fK/s %.1fd/s %.1fK/s %d/%d/%s"
+             (time/minsecs upsecs)
+             stream-doc-rate stream-kbyte-rate
+             index-doc-rate index-kbyte-rate
+             bulk-count bulk-bytes id))))
 
 (defn index-bulk [q state]
   (let [bulk (.take q)]
