@@ -1,5 +1,8 @@
 (ns stream2es.main
   (:gen-class)
+  ;; Need to require these because of the multimethod in s.stream.
+  (:require [stream2es.stream.wiki :as wiki]
+            [stream2es.stream.twitter :as twitter])
   (:require [cheshire.core :as json]
             [clj-http.client :as http]
             [clojure.java.io :as io]
@@ -7,16 +10,14 @@
             [clojure.tools.logging :as log]
             [stream2es.size :refer [size-of]]
             [stream2es.version :refer [version]]
-            [stream2es.wiki :as wiki]
-            [stream2es.twitter :as twitter]
+            [stream2es.stream :as stream]
             [stream2es.help :as help]
             [slingshot.slingshot :refer [try+ throw+]])
   (:import (clojure.lang ExceptionInfo)
            (java.util.concurrent CountDownLatch
                                  LinkedBlockingQueue)))
 
-(def indexing-threads
-  2)
+(def indexing-threads 2)
 
 (def opts
   [["-d" "--max-docs" "Number of docs to index"
@@ -94,13 +95,13 @@
   (flush-indexer state))
 
 (defn post [data]
-  (log/trace "POSTing" (count data) "chars")
+  (log/trace "POSTing" (count (.getBytes data)) "bytes")
   (http/post "http://localhost:9200/_bulk" {:body data}))
 
 (defn spit-mkdirs [path name data]
   (when path
     (let [f (io/file path name)]
-      (log/info "save" (str f) (count data) "chars")
+      (log/info "save" (str f) (count (.getBytes data)) "bytes")
       (.mkdirs (io/file path))
       (spit f data))))
 
@@ -196,9 +197,9 @@
     (fn [stream-object]
       (.put q stream-object))))
 
-(defn make-object-processor [state make-source]
+(defn make-object-processor [state]
   (fn [stream-object]
-    (let [source (make-source stream-object)]
+    (let [source (stream/make-source stream-object)]
       (dosync
        (let [item (source2item
                    (:index @state)
@@ -208,23 +209,16 @@
          (alter state update-in
                 [:bytes] + (-> item :source :bytes))
          (alter state update-in
-                [:total :streamed :bytes] + (-> item :source :bytes))
+                [:total :streamed :bytes]
+                + (-> source str .getBytes count))
          (alter state update-in
                 [:items] conj item))))))
 
 (defn stream! [state]
-  (let [make-source (condp = (:cmd @state)
-                      'twitter twitter/make-source
-                      'wiki wiki/make-source)
-        process (make-object-processor state make-source)
+  (let [process (make-object-processor state)
         publish (start-doc-stream state process)
-        stream-handler (condp = (:cmd @state)
-                         'twitter (twitter/make-stream
-                                   (:user @state)
-                                   (:pass @state)
-                                   publish)
-                         'wiki (wiki/make-stream (:url @state) publish))]
-    ((:run stream-handler) stream-handler)))
+        stream-runner (stream/make-runner (:stream @state) @state publish)]
+    ((-> stream-runner :runner))))
 
 (defn start! [opts]
   (let [state (ref
@@ -258,15 +252,6 @@
      (alter state assoc :indexer indexer))
     state))
 
-(defn cmd-specs [cmd]
-  (try
-    (->> (format "stream2es.%s/%s" cmd 'opts)
-         symbol
-         find-var
-         deref)
-    (catch Exception _
-      (throw+ {:type ::badcmd} "Can't find options for command %s" cmd))))
-
 (defn parse-opts [args specs]
   (try
     (apply cli args specs)
@@ -283,21 +268,23 @@
     (println)
     (println "Common opts:")
     (println (help/help opts))
-    (println "Wikipedia opts (default):")
-    (println (help/help wiki/opts))
-    (println "Twitter opts:")
-    (print (help/help twitter/opts))))
+    (doseq [impl (extenders stream/CommandLine)]
+      (println)
+      (println (format "%s opts (default):" (impl)))
+      (println (help/help (stream/specs impl))))))
 
 (defn -main [& args]
   (try+
     (let [cmd (symbol (or (first args) 'wiki))
-          main-plus-cmd-specs (concat opts (cmd-specs cmd))
+          stream (stream/new cmd)
+          main-plus-cmd-specs (concat opts (stream/specs stream))
           [optmap args _] (parse-opts args main-plus-cmd-specs)]
       (when (:help optmap)
         (quit (help)))
       (if (:version optmap)
         (quit (version))
         (let [state (start! (assoc optmap
+                              :stream stream
                               :cmd cmd))]
           (try
             (log/info
@@ -305,6 +292,7 @@
                      (:cmd @state) (:url @state "twitter")))
             (stream! state)
             (catch Exception e
+              (.printStackTrace e)
               (quit "stream error: %s" (str e)))))))
     (catch [:type ::badcmd] _
       (quit (help)))
