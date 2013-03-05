@@ -2,6 +2,7 @@
   (:gen-class)
   ;; Need to require these because of the multimethod in s.stream.
   (:require [stream2es.stream.wiki :as wiki]
+            [stream2es.stream.stdin :as stdin]
             [stream2es.stream.twitter :as twitter])
   (:require [cheshire.core :as json]
             [clj-http.client :as http]
@@ -51,7 +52,7 @@
    {:index
     {:_index _index
      :_type _type
-     :_id (:_id source)}}
+     :_id (str (:_id source))}}
    (merge (dissoc source :_id)
           {:bytes (size-of source)
            :offset offset})))
@@ -155,7 +156,6 @@
 (defn start-indexer-pool [state]
   (let [q (LinkedBlockingQueue. (:queue @state))
         latch (CountDownLatch. (:workers @state))
-        total (atom 0)
         disp (fn []
                (index-bulk q state)
                (log/debug "waiting for POSTs to finish")
@@ -176,18 +176,20 @@
 (defn start-doc-stream [state process]
   (let [q (LinkedBlockingQueue. (:stream-buffer @state))
         latch (CountDownLatch. 1)
+        stop (fn []
+               (want-shutdown state)
+               (.countDown latch))
         disp (fn []
                (let [obj (.take q)]
-                 (if-not (continue? state)
-                   (do
-                     (want-shutdown state)
-                     (.countDown latch))
+                 (if-not (and (not (= :eof obj))
+                              (continue? state))
+                   (stop)
                    (do
                      (dosync
-                      (alter state update-in [:total :streamed :docs] inc)
-                      (when-not (skip? state)
-                        (process obj)
-                        (maybe-index state)))
+                      (alter state update-in [:total :streamed :docs] inc))
+                     (when-not (skip? state)
+                       (process obj)
+                       (maybe-index state))
                      (recur)))))
         lifecycle (fn []
                     (.await latch)
@@ -201,6 +203,7 @@
 
 (defn make-object-processor [state]
   (fn [stream-object]
+    (log/trace 'stream-object stream-object)
     (let [source (stream/make-source stream-object)]
       (dosync
        (let [item (source2item
@@ -226,7 +229,6 @@
   (let [state (ref
                (merge opts
                       {:started-at (System/currentTimeMillis)
-                       :curr 0
                        :bytes 0
                        :items []
                        :total {:indexed {:docs 0
@@ -244,7 +246,7 @@
                (log/debug "waiting for indexers")
                (.await indexer-latch)
                (quit "streamed %d indexed docs %d indexed bytes %d"
-                     (-> @state :curr)
+                     (-> @state :total :streamed :docs)
                      (-> @state :total :indexed :docs)
                      (-> @state :total :indexed :bytes)))]
     (.start (Thread. kill "lifecycle"))
@@ -290,8 +292,10 @@
                               :cmd cmd))]
           (try
             (log/info
-             (format "streaming %s from %s"
-                     (:cmd @state) (:url @state "twitter")))
+             (format "streaming %s%s"
+                     (:cmd @state) (if (:url @state)
+                                     (format "from %s" (:url @state))
+                                     "")))
             (stream! state)
             (catch Exception e
               (.printStackTrace e)

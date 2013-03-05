@@ -32,8 +32,8 @@
      ["-i" "--index" "ES index" :default "wiki"]
      ["-t" "--type" "ES type" :default "page"]
      ["-u" "--url" "Wiki dump locator" :default latest-wiki]
-     ["--stream-buffer" "Buffer up to this many tweets"
-      :default 1000
+     ["--stream-buffer" "Buffer up to this many pages"
+      :default 50
       :parse-fn #(Integer/parseInt %)]])
   Stream
   (make-runner [this {:keys [url]} handler]
