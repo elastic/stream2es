@@ -50,9 +50,11 @@
 (defn source2item [_index _type offset source]
   (BulkItem.
    {:index
-    {:_index _index
-     :_type _type
-     :_id (str (:_id source))}}
+    (merge
+     {:_index _index
+      :_type _type}
+     (when (:_id source)
+       {:_id (str (:_id source))}))}
    (merge (dissoc source :_id)
           {:bytes (size-of source)
            :offset offset})))
