@@ -105,7 +105,7 @@
 (defn spit-mkdirs [path name data]
   (when path
     (let [f (io/file path name)]
-      (log/info "save" (str f) (count (.getBytes data)) "bytes")
+      (log/debug "save" (str f) (count (.getBytes data)) "bytes")
       (.mkdirs (io/file path))
       (spit f data))))
 
@@ -130,10 +130,11 @@
                                   1024)
                                upsecs)]
     (log/info
-     (format "%s %.1fd/s %.1fK/s %d/%d/%s"
+     (format "%s %.1fd/s %.1fK/s (%d docs %d bytes%s)"
              (time/minsecs upsecs)
              index-doc-rate index-kbyte-rate
-             bulk-count bulk-bytes id))))
+             bulk-count bulk-bytes
+             (if id (format " %s" id) "")))))
 
 (defn index-bulk [q state]
   (let [bulk (.take q)]
@@ -298,6 +299,8 @@
                      (:cmd @state) (if (:url @state)
                                      (format "from %s" (:url @state))
                                      "")))
+            (when (:tee @state)
+              (log/info (format "saving bulks to %s" (:tee @state))))
             (stream! state)
             (catch Exception e
               (.printStackTrace e)
