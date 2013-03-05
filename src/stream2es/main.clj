@@ -243,16 +243,20 @@
         collector-notifier #(.countDown collector-latch)
         indexer-notifier #(.countDown indexer-latch)
         indexer (start-indexer-pool state)
-        kill (fn []
+        end (fn []
+              (quit "streamed %d indexed docs %d indexed bytes %d\n\n\n"
+                    (-> @state :total :streamed :docs)
+                    (-> @state :total :indexed :docs)
+                    (-> @state :total :indexed :bytes)))
+        done (fn []
                (log/debug "waiting for collectors")
                (.await collector-latch)
                (log/debug "waiting for indexers")
                (.await indexer-latch)
-               (quit "streamed %d indexed docs %d indexed bytes %d"
-                     (-> @state :total :streamed :docs)
-                     (-> @state :total :indexed :docs)
-                     (-> @state :total :indexed :bytes)))]
-    (.start (Thread. kill "lifecycle"))
+               (end))]
+    (.start (Thread. done "lifecycle"))
+    (.addShutdownHook
+     (Runtime/getRuntime) (Thread. end "SIGTERM handler"))
     (dosync
      (alter state assoc :collector-notifier collector-notifier)
      (alter state assoc :indexer-notifier indexer-notifier)
