@@ -11,30 +11,32 @@ For when you need a little more control than
 
 By default, `stream2es` indexes the latest Wikipedia article dump.
 
-        % ./stream2es
+        % stream2es
         streaming wiki from http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
-        <--< 141 items; first-id 10
-        >--> 141 items; 3149564 bytes; first-id 10
-        <--< 90 items; first-id 661
-        >--> 90 items; 3274342 bytes; first-id 661
-        >--> 103 items; 3146938 bytes; first-id 807
-        <--< 103 items; first-id 807
-        >--> 94 items; 3195832 bytes; first-id 959
-        <--< 94 items; first-id 959
-        >--> 95 items; 3180746 bytes; first-id 1132
-        <--< 95 items; first-id 1132
-
-
-Index 100 Wikipedia docs *starting at* document 100.
-
-        ./stream2es wiki --max-docs 100 --skip 100
-        streaming wiki from http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
-        >--> 91 items; 3182370 bytes; first-id 593
-        <--< 91 items; first-id 593
-        <--< 9 items; first-id 740
-        >--> 9 items; 348052 bytes; first-id 740
-        flushing index queue
-        streamed 200 indexed 100
+        00:08.260 17.1d/s 372.2K/s (141 docs 3148232 bytes 10)
+        00:09.926 23.3d/s 631.9K/s (90 docs 3274854 bytes 661)
+        00:11.769 28.4d/s 794.2K/s (103 docs 3148672 bytes 807)
+        00:13.461 31.8d/s 926.0K/s (94 docs 3191976 bytes 959)
+        00:14.630 35.7d/s 1065.1K/s (95 docs 3193050 bytes 1132)
+        00:16.117 40.4d/s 1158.1K/s (128 docs 3155862 bytes 1274)
+        00:17.433 44.5d/s 1247.7K/s (124 docs 3161022 bytes 1461)
+        00:18.947 49.0d/s 1311.6K/s (154 docs 3173714 bytes 1629)
+        00:20.506 50.8d/s 1365.9K/s (112 docs 3233356 bytes 1828)
+        00:22.225 51.5d/s 1398.7K/s (103 docs 3152258 bytes 1980)
+        00:23.708 52.8d/s 1441.2K/s (107 docs 3154382 bytes 2132)
+        00:25.154 53.7d/s 1482.3K/s (101 docs 3192626 bytes 2289)
+        00:26.944 57.7d/s 1497.9K/s (204 docs 3147292 bytes 2459)
+        00:28.309 60.1d/s 1535.9K/s (145 docs 3195732 bytes 2729)
+        00:29.651 62.3d/s 1571.8K/s (145 docs 3199920 bytes 2943)
+        00:31.910 62.0d/s 1558.0K/s (132 docs 3184380 bytes 3163)
+        00:33.319 63.0d/s 1584.9K/s (121 docs 3165818 bytes 3395)
+        00:35.503 63.3d/s 1576.6K/s (147 docs 3243414 bytes 3640)
+        00:37.942 61.7d/s 1557.1K/s (96 docs 3181124 bytes 3851)
+        00:40.078 61.2d/s 1550.9K/s (110 docs 3150636 bytes 4032)
+        00:42.086 60.4d/s 1550.3K/s (91 docs 3165122 bytes 4200)
+        00:43.861 60.1d/s 1558.2K/s (93 docs 3171090 bytes 4352)
+          C-c C-c
+        streamed 2704 indexed docs 2636 indexed bytes 69984532
 
 If you're at a café or want to use a local copy of the dump, supply `--url`:
 
