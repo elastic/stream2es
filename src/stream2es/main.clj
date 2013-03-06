@@ -301,7 +301,7 @@
             (log/info
              (format "streaming %s%s"
                      (:cmd @state) (if (:url @state)
-                                     (format "from %s" (:url @state))
+                                     (format " from %s" (:url @state))
                                      "")))
             (when (:tee @state)
               (log/info (format "saving bulks to %s" (:tee @state))))
