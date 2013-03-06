@@ -8,7 +8,7 @@ clean:
 
 package: clean
 	mkdir -p etc
-	echo -n $(VERSION) >etc/version.txt
+	echo $(VERSION) >etc/version.txt
 	LEIN_SNAPSHOTS_IN_RELEASE=yes lein bin
 
 install: package
