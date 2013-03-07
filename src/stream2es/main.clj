@@ -39,12 +39,13 @@
 
 (defn quit
   ([]
-     (quit "done"))
+     (quit ""))
   ([s]
      (quit "%s" s))
   ([fmt & s]
      (shutdown-agents)
-     (println (apply format fmt s))
+     (when (pos? (count (first s)))
+       (println (apply format fmt s)))
      (System/exit 0)))
 
 (defn source2item [_index _type offset source]
@@ -275,29 +276,47 @@
     (catch Exception e
       (throw+ {:type ::badarg} (.getMessage e)))))
 
-(defn help []
+(defn help-preamble []
   (with-out-str
     (println "Copyright 2013 Elasticsearch")
     (println)
     (println "Usage: stream2es [CMD] [OPTS]")
     (println)
-    (println "Available commands: wiki, twitter")
+    (println "Available commands: wiki, twitter, stdin")
     (println)
     (println "Common opts:")
-    (println (help/help opts))
-    (doseq [impl (extenders stream/CommandLine)]
-      (println)
-      (println (format "%s opts (default):" (impl)))
-      (println (help/help (stream/specs impl))))))
+    (println (help/help opts))))
+
+(defn help
+  ([]
+     (with-out-str
+       (print (help-preamble))
+       (doseq [impl (extenders stream/CommandLine)
+               :let [inst (.newInstance impl)]]
+         (print (help inst)))))
+  ([stream]
+     (with-out-str
+       (println)
+       (println (format "%s opts:"
+                        (second (re-find #"\.([^.]+)@0$" (str stream)))))
+       (println (help/help (stream/specs stream))))))
+
+(defn get-cmd [args]
+  (if (seq args)
+    (let [tok (first args)]
+      (when (.startsWith tok "-")
+        (throw+ {:type ::badarg} ""))
+      (symbol tok))
+    'stdin))
 
 (defn -main [& args]
   (try+
-    (let [cmd (symbol (or (first args) 'wiki))
+    (let [cmd (get-cmd args)
           stream (stream/new cmd)
           main-plus-cmd-specs (concat opts (stream/specs stream))
           [optmap args _] (parse-opts args main-plus-cmd-specs)]
       (when (:help optmap)
-        (quit (help)))
+        (quit (help stream)))
       (if (:version optmap)
         (quit (version))
         (let [state (start! (assoc optmap
