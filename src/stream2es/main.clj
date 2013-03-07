@@ -19,6 +19,8 @@
            (java.util.concurrent CountDownLatch
                                  LinkedBlockingQueue)))
 
+(def quit? true)
+
 (def indexing-threads 2)
 
 (def opts
@@ -43,10 +45,11 @@
   ([s]
      (quit "%s" s))
   ([fmt & s]
-     (shutdown-agents)
      (when (pos? (count (first s)))
        (println (apply format fmt s)))
-     (System/exit 0)))
+     (when quit?
+       (shutdown-agents)
+       (System/exit 0))))
 
 (defn source2item [_index _type offset source]
   (BulkItem.
