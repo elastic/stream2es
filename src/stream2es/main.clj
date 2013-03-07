@@ -309,41 +309,46 @@
               streams
               (extenders stream/CommandLine))))))
 
-(defn get-cmd [args]
-  (if (seq args)
-    (let [tok (first args)]
-      (when (.startsWith tok "-")
-        (throw+ {:type ::badarg} ""))
-      (symbol tok))
-    'stdin))
+(defn get-stream [args]
+  (let [cmd (if (seq args)
+              (let [tok (first args)]
+                (when (.startsWith tok "-")
+                  (throw+ {:type ::badarg} ""))
+                (symbol tok))
+              'stdin)]
+    (try
+      [cmd (stream/new cmd)]
+      (catch IllegalArgumentException _
+        (throw+ {:type ::badcmd}
+                "%s is not a valid command" cmd)))))
+
+(defn main [world]
+  (let [state (start! world)]
+    (try
+      (log/info
+       (format "streaming %s%s"
+               (:cmd @state) (if (:url @state)
+                               (format " from %s" (:url @state))
+                               "")))
+      (when (:tee @state)
+        (log/info (format "saving bulks to %s" (:tee @state))))
+      (stream! state)
+      (catch Exception e
+        (.printStackTrace e)
+        (quit "stream error: %s" (str e))))))
 
 (defn -main [& args]
   (try+
-    (let [cmd (get-cmd args)
-          stream (stream/new cmd)
+    (let [[cmd stream] (get-stream args)
           main-plus-cmd-specs (concat opts (stream/specs stream))
           [optmap args _] (parse-opts args main-plus-cmd-specs)]
       (when (:help optmap)
         (quit (help stream)))
       (if (:version optmap)
         (quit (version))
-        (let [state (start! (assoc optmap
-                              :stream stream
-                              :cmd cmd))]
-          (try
-            (log/info
-             (format "streaming %s%s"
-                     (:cmd @state) (if (:url @state)
-                                     (format " from %s" (:url @state))
-                                     "")))
-            (when (:tee @state)
-              (log/info (format "saving bulks to %s" (:tee @state))))
-            (stream! state)
-            (catch Exception e
-              (.printStackTrace e)
-              (quit "stream error: %s" (str e)))))))
+        (main (assoc optmap :stream stream :cmd cmd))))
     (catch [:type ::badcmd] _
-      (quit (help)))
+      (quit (format "Error: %s\n\n%s" (:message &throw-context) (help))))
     (catch [:type ::badarg] _
       (let [msg (format "%s%s" (:message &throw-context) (help))]
         (quit msg)))
