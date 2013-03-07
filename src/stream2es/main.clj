@@ -285,21 +285,26 @@
     (println "Available commands: wiki, twitter, stdin")
     (println)
     (println "Common opts:")
-    (println (help/help opts))))
+    (print (help/help opts))))
 
-(defn help
-  ([]
-     (with-out-str
-       (print (help-preamble))
-       (doseq [impl (extenders stream/CommandLine)
-               :let [inst (.newInstance impl)]]
-         (print (help inst)))))
-  ([stream]
-     (with-out-str
-       (println)
-       (println (format "%s opts:"
-                        (second (re-find #"\.([^.]+)@0$" (str stream)))))
-       (println (help/help (stream/specs stream))))))
+(defn help-stream [& streams]
+  (with-out-str
+    (doseq [stream streams :let [inst (if (satisfies? stream/CommandLine stream)
+                                        stream
+                                        (.newInstance stream))]]
+      (println)
+      (println (format "%s opts:"
+                       (second (re-find #"\.([^.]+)@0$" (str inst)))))
+      (print (help/help (stream/specs inst))))))
+
+(defn help [& streams]
+  (with-out-str
+    (print (help-preamble))
+    (print
+     (apply help-stream
+            (if (seq streams)
+              streams
+              (extenders stream/CommandLine))))))
 
 (defn get-cmd [args]
   (if (seq args)
@@ -337,8 +342,10 @@
     (catch [:type ::badcmd] _
       (quit (help)))
     (catch [:type ::badarg] _
-      (let [msg (format "%s\n\n%s" (:message &throw-context) (help))]
+      (let [msg (format "%s%s" (:message &throw-context) (help))]
         (quit msg)))
     (catch Object _
-      (quit "unexpected exception: %s"
-            (:throwable &throw-context)))))
+      (let [t (:throwable &throw-context)]
+        (.printStackTrace t)
+        (quit "unexpected exception: %s"
+              (str t))))))
