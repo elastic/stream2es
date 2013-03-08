@@ -1,5 +1,6 @@
 (ns stream2es.stream.wiki
-  (:require [stream2es.stream :refer [new Stream Streamable CommandLine]])
+  (:require [stream2es.stream :refer [new Stream Streamable
+                                      StreamStorage CommandLine]])
   (:import (java.net URL MalformedURLException)
            (org.elasticsearch.river.wikipedia.support
             PageCallbackHandler WikiPage
@@ -38,7 +39,12 @@
   Stream
   (make-runner [this {:keys [url]} handler]
     (let [stream (make-parser url handler)]
-      (WikiStreamRunner. #(.parse stream)))))
+      (WikiStreamRunner. #(.parse stream))))
+  StreamStorage
+  (settings [_ type]
+    {:settings
+     {:number_of_shards 2
+      :number_of_replicas 0}}))
 
 (extend-type WikiPage
   Streamable
@@ -67,4 +73,3 @@
 (defn make-parser [loc handler]
   (doto (WikiXMLParserFactory/getSAXParser (url loc))
     (.setPageCallback (make-callback handler))))
-

@@ -1,5 +1,6 @@
 (ns stream2es.stream.twitter
-  (:require [stream2es.stream :refer [new Stream Streamable CommandLine]])
+  (:require [stream2es.stream :refer [new Stream Streamable
+                                      StreamStorage CommandLine]])
   (:import (twitter4j.conf ConfigurationBuilder)
            (twitter4j TwitterStreamFactory StatusListener Status)))
 
@@ -32,7 +33,35 @@
     (let [conf (.build (make-configuration user pass))
           stream (doto (-> (TwitterStreamFactory. conf) .getInstance)
                    (.addListener (make-callback handler)))]
-      (TwitterStreamRunner. #(.sample stream)))))
+      (TwitterStreamRunner. #(.sample stream))))
+  StreamStorage
+  (settings [_ type]
+    {:settings
+     {:number_of_shards 2
+      :number_of_replicas 0}
+     :mappings
+     {(keyword type)
+      {:properties
+       {:country-code {:type "string"}
+        :country {:type "string"}
+        :bytes {:type "long"}
+        :location {:type "geo_point"}
+        :place {:properties
+                {:country-code {:type "string"}
+                 :country {:type "string"}
+                 :url {:type "string"}
+                 :name {:type "string"}
+                 :type {:type "string"}}}
+        :created-at {:format "dateOptionalTime"
+                     :type "date"}
+        :text {:type "string"}
+        :user {:properties
+               {:screen-name {:type "string"}
+                :name {:type "string"}
+                :created-at {:format "dateOptionalTime"
+                             :type "date"}
+                :id {:type "long"}}}
+        :offset {:type "long"}}}}}))
 
 (extend-type Status
   Streamable
@@ -85,3 +114,6 @@
   (doto (ConfigurationBuilder.)
     (.setUser user)
     (.setPassword pass)))
+
+(defn mapping []
+  )

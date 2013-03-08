@@ -2,7 +2,8 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [stream2es.stream :refer [new Stream
-                                      Streamable CommandLine]]))
+                                      Streamable CommandLine
+                                      StreamStorage]]))
 
 (defrecord StdinStream [])
 
@@ -34,7 +35,12 @@
            (handler :eof)
            (do
              (handler (.readLine *in*))
-             (recur in))))))))
+             (recur in)))))))
+  StreamStorage
+  (settings [_ type]
+    {:settings
+     {:number_of_shards 2
+      :number_of_replicas 0}}))
 
 (extend-type String
   Streamable

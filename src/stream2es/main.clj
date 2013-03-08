@@ -5,10 +5,10 @@
             [stream2es.stream.stdin :as stdin]
             [stream2es.stream.twitter :as twitter])
   (:require [cheshire.core :as json]
-            [clj-http.client :as http]
             [clojure.java.io :as io]
             [clojure.tools.cli :refer [cli]]
             [clojure.tools.logging :as log]
+            [stream2es.es :as es]
             [stream2es.size :refer [size-of]]
             [stream2es.version :refer [version]]
             [stream2es.stream :as stream]
@@ -35,6 +35,9 @@
     :default indexing-threads
     :parse-fn #(Integer/parseInt %)]
    ["--tee" "Save bulk request payloads as files in path"]
+   ["--settings" "Index settings" :default nil]
+   ["--replace" "Delete index before streaming" :flag true :default false]
+   ["-u" "--es" "ES location" :default "http://localhost:9200"]
    ["-h" "--help" "Display help" :flag true :default false]])
 
 (defrecord BulkItem [meta source])
@@ -102,10 +105,6 @@
   (flush-bulk state)
   (flush-indexer state))
 
-(defn post [data]
-  (log/trace "POSTing" (count (.getBytes data)) "bytes")
-  (http/post "http://localhost:9200/_bulk" {:body data}))
-
 (defn spit-mkdirs [path name data]
   (when path
     (let [f (io/file path name)]
@@ -146,8 +145,9 @@
       (when (and (sequential? bulk) (pos? (count bulk)))
         (let [first-id (-> bulk first :meta :index :_id)
               idxbulk (make-indexable-bulk bulk)
-              bulk-bytes (reduce + (map #(get-in % [:source :bytes]) bulk))]
-          (post idxbulk)
+              bulk-bytes (reduce + (map #(get-in % [:source :bytes]) bulk))
+              url (format "%s/%s" (:es @state) "_bulk")]
+          (es/post url idxbulk)
           (dosync
            (alter state update-in [:total :indexed :docs] + (count bulk))
            (alter state update-in [:total :indexed :bytes] + bulk-bytes))
@@ -322,9 +322,21 @@
         (throw+ {:type ::badcmd}
                 "%s is not a valid command" cmd)))))
 
+(defn ensure-index [{:keys [stream es index
+                            type settings replace]}]
+  (when replace
+    (log/info "deleting index" index)
+    (es/delete es index))
+  (when-not (es/exists? es index)
+    (log/info "creating index" index)
+    (es/post es index (or settings
+                           (json/encode
+                            (stream/settings stream type))))))
+
 (defn main [world]
   (let [state (start! world)]
     (try
+      (ensure-index @state)
       (log/info
        (format "streaming %s%s"
                (:cmd @state) (if (:url @state)

@@ -13,6 +13,10 @@
   (make-source [obj]
     "Make map of stream Java source object."))
 
+(defprotocol StreamStorage
+  (settings [stream type]
+    "Index mapping/settings"))
+
 (defprotocol Stream
   (make-runner [stream opts publisher]
     "Make stream runner, wrapping up the handler that had to be
