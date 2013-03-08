@@ -38,7 +38,8 @@
   (settings [_ type]
     {:settings
      {:number_of_shards 2
-      :number_of_replicas 0}
+      :number_of_replicas 0
+      :refresh_interval -1}
      :mappings
      {(keyword type)
       {:properties
