@@ -23,6 +23,11 @@
 
 (def indexing-threads 2)
 
+(def index-settings
+  {:number_of_shards 2
+   :number_of_replicas 0
+   :refresh_interval -1})
+
 (def opts
   [["-d" "--max-docs" "Number of docs to index"
     :default -1
@@ -35,7 +40,8 @@
     :default indexing-threads
     :parse-fn #(Integer/parseInt %)]
    ["--tee" "Save bulk request payloads as files in path"]
-   ["--settings" "Index settings" :default nil]
+   ["--mappings" "Index mappings" :default nil]
+   ["--settings" "Index settings" :default (json/encode index-settings)]
    ["--replace" "Delete index before streaming" :flag true :default false]
    ["-u" "--es" "ES location" :default "http://localhost:9200"]
    ["-h" "--help" "Display help" :flag true :default false]])
@@ -322,16 +328,20 @@
         (throw+ {:type ::badcmd}
                 "%s is not a valid command" cmd)))))
 
-(defn ensure-index [{:keys [stream es index
-                            type settings replace]}]
+(defn ensure-index [{:keys [stream es index type
+                            mappings settings replace]}]
   (when replace
     (log/info "deleting index" index)
     (es/delete es index))
   (when-not (es/exists? es index)
     (log/info "creating index" index)
-    (es/post es index (or settings
-                           (json/encode
-                            (stream/settings stream type))))))
+    (let [mappings (merge (stream/mappings stream type)
+                          (json/decode mappings true))
+          settings (merge (stream/settings stream)
+                          (json/decode settings true))]
+      (es/post es index (json/encode
+                         {:settings settings
+                          :mappings mappings})))))
 
 (defn main [world]
   (let [state (start! world)]

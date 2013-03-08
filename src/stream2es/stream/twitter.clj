@@ -35,15 +35,12 @@
                    (.addListener (make-callback handler)))]
       (TwitterStreamRunner. #(.sample stream))))
   StreamStorage
-  (settings [_ type]
-    {:settings
-     {:number_of_shards 2
-      :number_of_replicas 0
-      :refresh_interval -1}
-     :mappings
-     {(keyword type)
-      {:properties
-       {:location {:type "geo_point"}}}}}))
+  (settings [_]
+    {})
+  (mappings [_ type]
+    {(keyword type)
+     {:properties
+      {:location {:type "geo_point"}}}}))
 
 (extend-type Status
   Streamable

@@ -14,8 +14,10 @@
     "Make map of stream Java source object."))
 
 (defprotocol StreamStorage
-  (settings [stream type]
-    "Index mapping/settings"))
+  (settings [stream]
+    "Index settings")
+  (mappings [stream type]
+    "Index mappings"))
 
 (defprotocol Stream
   (make-runner [stream opts publisher]
