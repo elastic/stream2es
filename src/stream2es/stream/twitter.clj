@@ -42,26 +42,7 @@
      :mappings
      {(keyword type)
       {:properties
-       {:country-code {:type "string"}
-        :country {:type "string"}
-        :bytes {:type "long"}
-        :location {:type "geo_point"}
-        :place {:properties
-                {:country-code {:type "string"}
-                 :country {:type "string"}
-                 :url {:type "string"}
-                 :name {:type "string"}
-                 :type {:type "string"}}}
-        :created-at {:format "dateOptionalTime"
-                     :type "date"}
-        :text {:type "string"}
-        :user {:properties
-               {:screen-name {:type "string"}
-                :name {:type "string"}
-                :created-at {:format "dateOptionalTime"
-                             :type "date"}
-                :id {:type "long"}}}
-        :offset {:type "long"}}}}}))
+       {:location {:type "geo_point"}}}}}))
 
 (extend-type Status
   Streamable
