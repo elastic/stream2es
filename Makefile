@@ -12,9 +12,9 @@ package: clean
 	echo $(VERSION) >etc/version.txt
 	LEIN_SNAPSHOTS_IN_RELEASE=yes $(LEIN) bin
 
-install: package
+install: target/$(BIN)
 	cp target/$(BIN) ~/bin/$(NAME)
 
-release: package
+release: target/$(BIN)
 	s3cmd -c $(S3CREDS) put -P target/$(BIN) $(S3HOME)/$(BIN)
 	s3cmd -c $(S3CREDS) cp $(S3HOME)/$(BIN) $(S3HOME)/$(NAME)
