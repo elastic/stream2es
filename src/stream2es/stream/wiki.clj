@@ -41,10 +41,13 @@
     (let [stream (make-parser url handler)]
       (WikiStreamRunner. #(.parse stream))))
   StreamStorage
-  (settings [_ type]
-    {:settings
-     {:number_of_shards 2
-      :number_of_replicas 0}}))
+  (settings [_]
+    {:number_of_shards 2
+     :number_of_replicas 0})
+  (mappings [_ type]
+    {(keyword type)
+     {:properties
+      {}}}))
 
 (extend-type WikiPage
   Streamable

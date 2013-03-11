@@ -37,10 +37,13 @@
              (handler (.readLine *in*))
              (recur in)))))))
   StreamStorage
-  (settings [_ type]
-    {:settings
-     {:number_of_shards 2
-      :number_of_replicas 0}}))
+  (settings [_]
+    {:number_of_shards 2
+     :number_of_replicas 0})
+  (mappings [_ type]
+    {(keyword type)
+     {:properties
+      {}}}))
 
 (extend-type String
   Streamable
