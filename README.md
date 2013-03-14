@@ -11,7 +11,7 @@ For when you need a little more control than
 
 By default, `stream2es` indexes the latest Wikipedia article dump.
 
-        % stream2es
+        % stream2es wiki
         streaming wiki from http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
         00:08.260 17.1d/s 372.2K/s (141 docs 3148232 bytes 10)
         00:09.926 23.3d/s 631.9K/s (90 docs 3274854 bytes 661)
