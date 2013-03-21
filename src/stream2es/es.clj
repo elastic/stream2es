@@ -14,7 +14,7 @@
      (http/post (index-url url index) {:body data})))
 
 (defn delete [url index]
-  (http/delete (index-url url index)))
+  (http/delete (index-url url index) {:throw-exceptions false}))
 
 (defn exists? [url index]
   (try
