@@ -333,10 +333,10 @@
 (defn ensure-index [{:keys [stream es index type
                             mappings settings replace]}]
   (when replace
-    (log/info "deleting index" index)
+    (log/info "delete index" index)
     (es/delete es index))
   (when-not (es/exists? es index)
-    (log/info "creating index" index)
+    (log/info "create index" index)
     (let [mappings (merge (stream/mappings stream type)
                           (json/decode mappings true))
           settings (merge (stream/settings stream)
@@ -350,7 +350,7 @@
     (try
       (ensure-index @state)
       (log/info
-       (format "streaming %s%s"
+       (format "stream %s%s"
                (:cmd @state) (if (:url @state)
                                (format " from %s" (:url @state))
                                "")))
