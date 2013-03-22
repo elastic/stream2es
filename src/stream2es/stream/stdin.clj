@@ -42,8 +42,8 @@
      :number_of_replicas 0})
   (mappings [_ type]
     {(keyword type)
-     {:properties
-      {}}}))
+     {:_all {:enabled false}
+      :properties {}}}))
 
 (extend-type String
   Streamable

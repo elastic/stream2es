@@ -39,8 +39,9 @@
     {})
   (mappings [_ type]
     {(keyword type)
-     {:properties
-      {:location {:type "geo_point"}}}}))
+     {:_all {:enabled false}
+      :properties {:properties
+                   {:location {:type "geo_point"}}}}}))
 
 (extend-type Status
   Streamable
