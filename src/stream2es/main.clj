@@ -13,6 +13,7 @@
             [stream2es.stream :as stream]
             [stream2es.help :as help]
             [stream2es.util.io :as io]
+            [stream2es.util.string :as s]
             [stream2es.util.time :as time]
             [slingshot.slingshot :refer [try+ throw+]])
   (:import (clojure.lang ExceptionInfo)
@@ -116,12 +117,7 @@
 
 (defn spit-mkdirs [path name data]
   (when path
-    (let [sub (->> name
-                   (re-find #"(.)(.)\..*")
-                   rest
-                   reverse
-                   (interpose java.io.File/separator)
-                   (apply str))
+    (let [sub (s/hash-dir 2)
           path (io/file path sub)
           f (io/file path name)]
       (log/debug "save" (str f) (count (.getBytes data)) "bytes")
