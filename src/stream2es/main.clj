@@ -273,7 +273,7 @@
               (when-not @printed-done?
                 (log/info
                  (format
-                  "streamed %d docs %d bytes xfer %d"
+                  "streamed %d indexed %d bytes xfer %d"
                   (-> @state :total :streamed :docs)
                   (-> @state :total :indexed :docs)
                   (-> @state :total :indexed :wire-bytes)))
