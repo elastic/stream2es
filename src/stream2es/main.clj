@@ -61,16 +61,17 @@
        (System/exit 0))))
 
 (defn source2item [_index _type offset source]
-  (BulkItem.
-   {:index
-    (merge
-     {:_index _index
-      :_type _type}
-     (when (:_id source)
-       {:_id (str (:_id source))}))}
-   (merge (dissoc source :_id)
-          {:bytes (size-of source)
-           :offset offset})))
+  (let [bytes (-> source json/encode .getBytes count)]
+    (BulkItem.
+     {:index
+      (merge
+       {:_index _index
+        :_type _type}
+       (when (:_id source)
+         {:_id (str (:_id source))}))}
+     (merge (dissoc source :_id)
+            {:bytes bytes
+             :offset offset}))))
 
 (defn flush-bulk [state]
   (let [itemct (count (:items @state))
@@ -126,12 +127,12 @@
               "\n"))
        (apply str)))
 
-(defn index-status [id bulk-count bulk-bytes bulkreqbytes state]
+(defn index-status [id bulk-count bulk-bytes state]
   (let [upmillis (- (System/currentTimeMillis) (:started-at @state))
         upsecs (float (/ upmillis 1e3))
         index-doc-rate (/ (get-in @state [:total :indexed :docs]) upsecs)
         index-kbyte-rate (/
-                          (/ (get-in @state [:total :indexed :bytes]) 1024)
+                          (/ (get-in @state [:total :indexed :wire-bytes]) 1024)
                           upsecs)
         #_stream-doc-rate #_(/ (get-in @state [:total :streamed :docs]) upsecs)
         #_stream-kbyte-rate #_(/
@@ -139,11 +140,11 @@
                                   1024)
                                upsecs)]
     (log/info
-     (format "%s %.1fd/s %.1fK/s %d %d %d %d%s"
+     (format "%s %.1fd/s %.1fK/s %d %d %d%s"
              (time/minsecs upsecs)
              index-doc-rate index-kbyte-rate
              (get-in @state [:total :indexed :docs])
-             bulk-count bulk-bytes bulkreqbytes
+             bulk-count bulk-bytes
              (if id (format " %s" id) "")))))
 
 (defn index-bulk [q state]
@@ -158,8 +159,9 @@
           (es/post url idxbulk)
           (dosync
            (alter state update-in [:total :indexed :docs] + (count bulk))
-           (alter state update-in [:total :indexed :bytes] + bulk-bytes))
-          (index-status first-id (count bulk) bulk-bytes idxbulkbytes state)
+           (alter state update-in [:total :indexed :bytes] + bulk-bytes)
+           (alter state update-in [:total :indexed :wire-bytes] + idxbulkbytes))
+          (index-status first-id (count bulk) idxbulkbytes state)
           (spit-mkdirs
            (:tee @state)
            (str first-id ".bulk")
@@ -247,7 +249,8 @@
                        :bytes 0
                        :items []
                        :total {:indexed {:docs 0
-                                         :bytes 0}
+                                         :bytes 0
+                                         :wire-bytes 0}
                                :streamed {:docs 0
                                           :bytes 0}}}))
         collector-latch (CountDownLatch. 1)
@@ -260,10 +263,10 @@
               (when-not @printed-done?
                 (log/info
                  (format
-                  "streamed %d indexed docs %d indexed bytes %d"
+                  "streamed %d docs %d bytes xfer %d"
                   (-> @state :total :streamed :docs)
                   (-> @state :total :indexed :docs)
-                  (-> @state :total :indexed :bytes)))
+                  (-> @state :total :indexed :wire-bytes)))
                 (reset! printed-done? true)))
         done (fn []
                (log/debug "waiting for collectors")
