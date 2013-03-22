@@ -114,7 +114,14 @@
 
 (defn spit-mkdirs [path name data]
   (when path
-    (let [f (io/file path name)]
+    (let [sub (->> name
+                   (re-find #"(.)(.)\..*")
+                   rest
+                   reverse
+                   (interpose java.io.File/separator)
+                   (apply str))
+          path (io/file path sub)
+          f (io/file path name)]
       (log/debug "save" (str f) (count (.getBytes data)) "bytes")
       (.mkdirs (io/file path))
       (spit f data))))
