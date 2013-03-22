@@ -9,53 +9,51 @@ For when you need a little more control than
 
 ## Quick Start
 
-By default, `stream2es` indexes the latest Wikipedia article dump.
+By default, `stream2es` reads JSON documents from stdin.
 
-        % stream2es wiki
-        streaming wiki from http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
-        00:08.260 17.1d/s 372.2K/s (141 docs 3148232 bytes 10)
-        00:09.926 23.3d/s 631.9K/s (90 docs 3274854 bytes 661)
-        00:11.769 28.4d/s 794.2K/s (103 docs 3148672 bytes 807)
-        00:13.461 31.8d/s 926.0K/s (94 docs 3191976 bytes 959)
-        00:14.630 35.7d/s 1065.1K/s (95 docs 3193050 bytes 1132)
-        00:16.117 40.4d/s 1158.1K/s (128 docs 3155862 bytes 1274)
-        00:17.433 44.5d/s 1247.7K/s (124 docs 3161022 bytes 1461)
-        00:18.947 49.0d/s 1311.6K/s (154 docs 3173714 bytes 1629)
-        00:20.506 50.8d/s 1365.9K/s (112 docs 3233356 bytes 1828)
-        00:22.225 51.5d/s 1398.7K/s (103 docs 3152258 bytes 1980)
-        00:23.708 52.8d/s 1441.2K/s (107 docs 3154382 bytes 2132)
-        00:25.154 53.7d/s 1482.3K/s (101 docs 3192626 bytes 2289)
-        00:26.944 57.7d/s 1497.9K/s (204 docs 3147292 bytes 2459)
-        00:28.309 60.1d/s 1535.9K/s (145 docs 3195732 bytes 2729)
-        00:29.651 62.3d/s 1571.8K/s (145 docs 3199920 bytes 2943)
-        00:31.910 62.0d/s 1558.0K/s (132 docs 3184380 bytes 3163)
-        00:33.319 63.0d/s 1584.9K/s (121 docs 3165818 bytes 3395)
-        00:35.503 63.3d/s 1576.6K/s (147 docs 3243414 bytes 3640)
-        00:37.942 61.7d/s 1557.1K/s (96 docs 3181124 bytes 3851)
-        00:40.078 61.2d/s 1550.9K/s (110 docs 3150636 bytes 4032)
-        00:42.086 60.4d/s 1550.3K/s (91 docs 3165122 bytes 4200)
-        00:43.861 60.1d/s 1558.2K/s (93 docs 3171090 bytes 4352)
-          C-c C-c
-        streamed 2704 indexed docs 2636 indexed bytes 69984532
+        % echo '{"foo":1}' | stream2es
+        create index foo
+        stream stdin
+        flushing index queue
+        00:00.505 2.0d/s 0.1K/s 1 1 70
+        streamed 1 docs 1 bytes xfer 70
+        %
+
+You can also index the latest Wikipedia article dump.
+
+        % stream2es wiki --index tmp            
+        create index tmp
+        stream wiki from http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-art
+        icles.xml.bz2
+        00:04.984 44.7d/s 622.7K/s 223 223 3177989 10
+        00:07.448 54.1d/s 838.1K/s 403 180 3213889 794
+        00:09.715 63.0d/s 961.4K/s 612 209 3172256 1081
+        00:12.000 73.2d/s 1036.1K/s 878 266 3167860 1404
+        00:14.385 75.2d/s 1079.9K/s 1082 204 3174907 1756
+        ^Cstreamed 1158 docs 1082 bytes xfer 15906901
+
+What is the output telling me?
+
+        00:12.000: MM:SS that the app has been running
+          73.2d/s: Docs per second indexed
+        1036.1K/s: Bytes per second indexed (bulk transferred over the wire)
+              878: Total docs indexed so far
+              266: Docs in bulk
+          3167860: Total JSON bytes of docs in the bulk
+             1404: The _id of the first doc in the bulk
 
 If you're at a café or want to use a local copy of the dump, supply `--url`:
 
         % ./stream2es wiki --max-docs 5 --url /d/data/enwiki-20121201-pages-articles.xml.bz2
 
-stream2es streams into a buffer and publishes bulk requests in a
-queue.  Indexing threads pull those bulk requests concurrently.  A
-page callback may block if it has to wait for a spot.  The log lines
-with arrows refer to a bulk request being published on the indexing
-queue, and removed when ES has acknowledged receipt.
-
 ## Options
 
         Copyright 2013 Elasticsearch
-        
+
         Usage: stream2es [CMD] [OPTS]
-        
+
         Available commands: wiki, twitter, stdin
-        
+
         Common opts:
         -u --es         ES location (default: "http://localhost:9200")
         -h --help       Display help (default: false)
@@ -67,7 +65,7 @@ queue, and removed when ES has acknowledged receipt.
            --tee        Save bulk request payloads as files in path (default: null)
         -v --version    Print version (default: false)
         -w --workers    Number of indexing threads (default: 2)
-        
+
         TwitterStream opts:
         -b --bulk-bytes Bulk size in bytes (default: 102400)
         -i --index      ES index (default: "twitter")
@@ -76,14 +74,14 @@ queue, and removed when ES has acknowledged receipt.
            --stream-buffer Buffer up to this many tweets (default: 1000)
         -t --type       ES document type (default: "status")
            --user       Twitter username (default: "")
-        
+
         StdinStream opts:
         -b --bulk-bytes Bulk size in bytes (default: 102400)
         -i --index      ES index (default: "foo")
         -q --queue      Size of the internal bulk queue (default: 40)
            --stream-buffer Buffer up to this many docs (default: 100)
         -t --type       ES type (default: "t")
-        
+
         WikiStream opts:
         -b --bulk-bytes Bulk size in bytes (default: 3145728)
         -i --index      ES index (default: "wiki")
