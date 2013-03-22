@@ -43,6 +43,8 @@
    ["--mappings" "Index mappings" :default nil]
    ["--settings" "Index settings" :default (json/encode index-settings)]
    ["--replace" "Delete index before streaming" :flag true :default false]
+   ["--indexing" "Whether to actually send data to ES"
+    :flag true :default true]
    ["-u" "--es" "ES location" :default "http://localhost:9200"]
    ["-h" "--help" "Display help" :flag true :default false]])
 
@@ -163,7 +165,8 @@
               idxbulkbytes (count (.getBytes idxbulk))
               bulk-bytes (reduce + (map #(get-in % [:source :bytes]) bulk))
               url (format "%s/%s" (:es @state) "_bulk")]
-          (es/post url idxbulk)
+          (when (:indexing @state)
+            (es/post url idxbulk))
           (dosync
            (alter state update-in [:total :indexed :docs] + (count bulk))
            (alter state update-in [:total :indexed :bytes] + bulk-bytes)
@@ -358,7 +361,8 @@
 (defn main [world]
   (let [state (start! world)]
     (try
-      (ensure-index @state)
+      (when (:indexing @state)
+        (ensure-index @state))
       (log/info
        (format "stream %s%s"
                (:cmd @state) (if (:url @state)
