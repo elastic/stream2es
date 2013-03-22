@@ -5,7 +5,6 @@
             [stream2es.stream.stdin :as stdin]
             [stream2es.stream.twitter :as twitter])
   (:require [cheshire.core :as json]
-            [clojure.java.io :as io]
             [clojure.tools.cli :refer [cli]]
             [clojure.tools.logging :as log]
             [stream2es.es :as es]
@@ -13,6 +12,7 @@
             [stream2es.version :refer [version]]
             [stream2es.stream :as stream]
             [stream2es.help :as help]
+            [stream2es.util.io :as io]
             [stream2es.util.time :as time]
             [slingshot.slingshot :refer [try+ throw+]])
   (:import (clojure.lang ExceptionInfo)
@@ -126,7 +126,7 @@
           f (io/file path name)]
       (log/debug "save" (str f) (count (.getBytes data)) "bytes")
       (.mkdirs (io/file path))
-      (spit f data))))
+      (io/spit-gz f data))))
 
 (defn make-indexable-bulk [items]
   (->> (for [item items]
@@ -174,7 +174,7 @@
           (index-status first-id (count bulk) idxbulkbytes state)
           (spit-mkdirs
            (:tee @state)
-           (str first-id ".bulk")
+           (str first-id ".bulk.gz")
            idxbulk)))
       (log/debug "adding indexed total"
                  (get-in @state [:total :indexed :docs]) "+" (count bulk))
