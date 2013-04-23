@@ -50,19 +50,19 @@
           geo (.getGeoLocation status)]
       (merge
        {:_id (.getId status)
-        :created-at (.getCreatedAt status)
+        :created_at (.getCreatedAt status)
         :text (.getText status)
         :user {:id (.getId u)
-               :created-at (.getCreatedAt u)
+               :created_at (.getCreatedAt u)
                :name (.getName u)
-               :screen-name (.getScreenName u)}}
+               :screen_name (.getScreenName u)}}
        (when place
          {:place
           (let [loc (.getGeometryCoordinates place)
                 street (.getStreetAddress place)]
             (merge
              {:country (.getCountry place)
-              :country-code (.getCountryCode place)
+              :country_code (.getCountryCode place)
               :url (.getURL place)
               :name (.getFullName place)
               :type (.getPlaceType place)}
