@@ -32,7 +32,8 @@
       (testing "use defaults"
         (is (= {:settings (json/decode settings true)
                 :mappings {:thing
-                           {:properties
+                           {:_all {:enabled false}
+                            :properties
                             {:location {:type "geo_point"}}}}}
                (json/decode
                 (stream2es.main/ensure-index
