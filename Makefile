@@ -10,8 +10,8 @@ install: target/$(BIN)
 	cp target/$(BIN) ~/bin/$(NAME)
 
 release: target/$(BIN)
-	s3cmd -c $(S3CREDS) put -P target/$(BIN) $(S3HOME)/$(BIN)
-	s3cmd -c $(S3CREDS) cp $(S3HOME)/$(BIN) $(S3HOME)/$(NAME)
+	s3c es.download put -P target/$(BIN) $(S3HOME)/$(BIN)
+	s3c es.download cp $(S3HOME)/$(BIN) $(S3HOME)/$(NAME)
 
 clean:
 	$(LEIN) clean
