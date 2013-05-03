@@ -43,7 +43,8 @@
   StreamStorage
   (settings [_]
     {:number_of_shards 2
-     :number_of_replicas 0})
+     :number_of_replicas 0
+     :query.default_field :text})
   (mappings [_ type]
     {(keyword type)
      {:_all {:enabled false}

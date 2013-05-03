@@ -36,7 +36,7 @@
       (TwitterStreamRunner. #(.sample stream))))
   StreamStorage
   (settings [_]
-    {})
+    {:query.default_field :text})
   (mappings [_ type]
     {(keyword type)
      {:_all {:enabled false}
