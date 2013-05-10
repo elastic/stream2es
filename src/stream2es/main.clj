@@ -48,7 +48,7 @@
     :parse-fn #(Integer/parseInt %)]
    ["--tee" "Save bulk request payloads as files in path"]
    ["--mappings" "Index mappings" :default nil]
-   ["--settings" "Index settings" :default (json/encode index-settings)]
+   ["--settings" "Index settings" :default nil]
    ["--replace" "Delete index before streaming" :flag true :default false]
    ["--indexing" "Whether to actually send data to ES"
     :flag true :default true]
@@ -354,7 +354,8 @@
     (log/info "create index" index)
     (let [mappings (merge (stream/mappings stream type)
                           (json/decode mappings true))
-          settings (merge (stream/settings stream)
+          settings (merge index-settings
+                          (stream/settings stream)
                           (json/decode settings true))]
       (es/post es index (json/encode
                          {:settings settings
