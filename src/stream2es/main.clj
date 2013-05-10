@@ -33,6 +33,12 @@
   [["-d" "--max-docs" "Number of docs to index"
     :default -1
     :parse-fn #(Integer/parseInt %)]
+   ["-q" "--queue" "Size of the internal bulk queue"
+    :default 40
+    :parse-fn #(Integer/parseInt %)]
+   ["--stream-buffer" "Buffer up to this many pages"
+    :default 50
+    :parse-fn #(Integer/parseInt %)]
    ["-s" "--skip" "Skip this many docs before indexing"
     :default 0
     :parse-fn #(Integer/parseInt %)]
