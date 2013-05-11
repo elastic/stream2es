@@ -6,7 +6,7 @@
             [stream2es.stream.twitter :as twitter])
   (:require [cheshire.core :as json]
             [clojure.tools.cli :refer [cli]]
-            [clojure.tools.logging :as log]
+            [stream2es.log :as log]
             [stream2es.es :as es]
             [stream2es.size :refer [size-of]]
             [stream2es.version :refer [version]]
@@ -103,7 +103,6 @@
 (defn continue? [state]
   (let [curr (get-in @state [:total :streamed :docs])
         {:keys [skip max-docs]} @state]
-    (log/trace 'skip skip 'max-docs max-docs 'curr curr)
     (if (pos? max-docs)
       (< curr (+ skip max-docs))
       true)))
@@ -232,7 +231,6 @@
 
 (defn make-object-processor [state]
   (fn [stream-object]
-    (log/trace 'stream-object stream-object)
     (let [source (stream/make-source stream-object)]
       (dosync
        (let [item (source2item
