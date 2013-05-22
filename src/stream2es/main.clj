@@ -18,7 +18,8 @@
             [slingshot.slingshot :refer [try+ throw+]])
   (:import (clojure.lang ExceptionInfo)
            (java.util.concurrent CountDownLatch
-                                 LinkedBlockingQueue)))
+                                 LinkedBlockingQueue
+                                 TimeUnit)))
 
 (def quit? true)
 
@@ -208,8 +209,9 @@
                (want-shutdown state)
                (.countDown latch))
         disp (fn []
-               (let [obj (.take q)]
-                 (if-not (and (not (= :eof obj))
+               (let [obj (.poll q 5 TimeUnit/SECONDS)]
+                 (if-not (and obj
+                              (not (= :eof obj))
                               (continue? state))
                    (stop)
                    (do
