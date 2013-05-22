@@ -124,7 +124,7 @@
   (when path
     (let [sub (s/hash-dir 2)
           path (io/file path sub)
-          f (io/file path name)]
+          f (io/file path (str name ".gz"))]
       (log/debug "save" (str f) (count (.getBytes data)) "bytes")
       (.mkdirs (io/file path))
       (io/spit-gz f data))))
@@ -175,7 +175,7 @@
           (index-status first-id (count bulk) idxbulkbytes state)
           (spit-mkdirs
            (:tee @state)
-           (str first-id ".bulk.gz")
+           (str first-id ".bulk")
            idxbulk)))
       (log/debug "adding indexed total"
                  (get-in @state [:total :indexed :docs]) "+" (count bulk))
