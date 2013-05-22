@@ -18,6 +18,12 @@
 
 (def ^:dynamic *debug* false)
 
+(def ^:dynamic *trace* false)
+
+(defmacro trace [& msg]
+  (when *trace*
+    `(apply log ~(vec msg))))
+
 (defmacro debug [& msg]
   (when *debug*
     `(apply log ~(vec msg))))

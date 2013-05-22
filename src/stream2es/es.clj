@@ -1,7 +1,7 @@
 (ns stream2es.es
   (:require [cheshire.core :as json]
             [clj-http.client :as http]
-            [clojure.tools.logging :as log]))
+            [stream2es.log :as log]))
 
 (defn index-url [url index]
   (format "%s/%s" url index))
