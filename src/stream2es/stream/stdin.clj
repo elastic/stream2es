@@ -31,11 +31,12 @@
     (StdinStreamRunner.
      (fn []
        (loop [in (io/reader *in*)]
-         (if-not (.ready *in*)
-           (handler :eof)
-           (do
-             (handler (.readLine *in*))
-             (recur in)))))))
+         (let [line (.readLine *in*)]
+           (if-not line
+             (handler :eof)
+             (do
+               (handler line)
+               (recur in))))))))
   StreamStorage
   (settings [_]
     {:number_of_shards 2
