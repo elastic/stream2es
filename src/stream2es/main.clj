@@ -197,25 +197,25 @@
               (spit-mkdirs (:tee @state) (str first-id ".json") data)))))
       (recur q state))))
 
-(defn start-indexer-pool [state]
-  (let [q (LinkedBlockingQueue. (:queue @state))
-        latch (CountDownLatch. (:workers @state))
-        disp (fn []
-               (index-bulk q state)
-               (log/debug "waiting for POSTs to finish")
-               (.countDown latch))
+(defn make-queue
+  "Create a queue and wire up its dispatcher and lifecycle
+  management. Returns a function which enqueues an object."
+  [name size workers f notify]
+  (let [q (LinkedBlockingQueue. size)
+        latch (CountDownLatch. workers)
+        dispatch (fn []
+                   (f q)
+                   (.countDown latch))
         lifecycle (fn []
                     (.await latch)
-                    (log/debug "done indexing")
-                    ((:indexer-notifier @state)))]
-    ;; start index pool
-    (dotimes [n (:workers @state)]
-      (.start (Thread. disp (str "indexer " (inc n)))))
-    ;; notify when done
-    (.start (Thread. lifecycle "index service"))
-    ;; This becomes :indexer above!
-    (fn [bulk]
-      (.put q bulk))))
+                    (notify))]
+    (dotimes [n workers]
+      (.start
+       (Thread. dispatch
+                (format "%s-%d" name (inc n)))))
+    (.start (Thread. lifecycle (format "%s service" name)))
+    (fn [obj]
+      (.put q obj))))
 
 (defn start-doc-stream [state process]
   (let [q (LinkedBlockingQueue. (:stream-buffer @state))
@@ -285,7 +285,11 @@
         indexer-latch (CountDownLatch. 1)
         collector-notifier #(.countDown collector-latch)
         indexer-notifier #(.countDown indexer-latch)
-        indexer (start-indexer-pool state)
+        indexer (make-queue "indexer"
+                            (:queue @state)
+                            (:workers @state)
+                            #(index-bulk % state)
+                            indexer-notifier)
         printed-done? (atom false)
         end (fn []
               (when-not @printed-done?
@@ -308,7 +312,6 @@
      (Runtime/getRuntime) (Thread. end "SIGTERM handler"))
     (dosync
      (alter state assoc :collector-notifier collector-notifier)
-     (alter state assoc :indexer-notifier indexer-notifier)
      (alter state assoc :indexer indexer))
     state))
 
