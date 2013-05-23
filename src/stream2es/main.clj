@@ -217,35 +217,6 @@
     (fn [obj]
       (.put q obj))))
 
-(defn start-doc-stream [state process]
-  (let [q (LinkedBlockingQueue. (:stream-buffer @state))
-        latch (CountDownLatch. 1)
-        stop (fn []
-               (want-shutdown state)
-               (.countDown latch))
-        disp (fn []
-               (let [obj (.poll q 120 TimeUnit/SECONDS)]
-                 (if-not (and obj
-                              (not (= :eof obj))
-                              (continue? state))
-                   (stop)
-                   (do
-                     (dosync
-                      (alter state update-in [:total :streamed :docs] inc))
-                     (when-not (skip? state)
-                       (process obj)
-                       (maybe-index state))
-                     (recur)))))
-        lifecycle (fn []
-                    (.await latch)
-                    (log/debug "done collecting")
-                    ((:collector-notifier @state)))]
-    (.start (Thread. disp "stream dispatcher"))
-    (.start (Thread. lifecycle "stream service"))
-    ;; publisher
-    (fn [stream-object]
-      (.put q stream-object))))
-
 (defn make-object-processor [state]
   (fn [stream-object]
     (let [source (stream/make-source stream-object)]
@@ -266,7 +237,24 @@
 
 (defn stream! [state]
   (let [process (make-object-processor state)
-        publish (start-doc-stream state process)
+        publish (make-queue "processor"
+                            (:stream-buffer @state)
+                            1
+                            (fn [q]
+                              (let [obj (.poll q 120 TimeUnit/SECONDS)]
+                                (if-not (and obj
+                                             (not (= :eof obj))
+                                             (continue? state))
+                                  (want-shutdown state)
+                                  (do
+                                    (dosync
+                                     (alter state update-in
+                                            [:total :streamed :docs] inc))
+                                    (when-not (skip? state)
+                                      (process obj)
+                                      (maybe-index state))
+                                    (recur q)))))
+                            (:collector-notifier @state))
         stream-runner (stream/make-runner (:stream @state) @state publish)]
     ((-> stream-runner :runner))))
 
