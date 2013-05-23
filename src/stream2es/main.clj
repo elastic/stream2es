@@ -138,6 +138,13 @@
               "\n"))
        (apply str)))
 
+(defn make-json-string [items]
+  (->> items
+       (map :source)
+       (map json/encode)
+       (interpose "\n")
+       (apply str)))
+
 (defn index-status [id bulk-count bulk-bytes state]
   (let [upmillis (- (System/currentTimeMillis) (:started-at @state))
         upsecs (float (/ upmillis 1e3))
@@ -162,24 +169,25 @@
   (let [bulk (.take q)]
     (when-not (= :stop bulk)
       (when (and (sequential? bulk) (pos? (count bulk)))
-        (let [first-id (-> bulk first :meta :index :_id)
-              idxbulk (make-indexable-bulk bulk)
-              idxbulkbytes (count (.getBytes idxbulk))
-              bulk-bytes (reduce + (map #(get-in % [:source :bytes]) bulk))
-              url (format "%s/%s" (:es @state) "_bulk")]
+        (let [first-id (-> bulk first :meta :index :_id)]
           (when (:indexing @state)
-            (es/post url idxbulk))
-          (dosync
-           (alter state update-in [:total :indexed :docs] + (count bulk))
-           (alter state update-in [:total :indexed :bytes] + bulk-bytes)
-           (alter state update-in [:total :indexed :wire-bytes] + idxbulkbytes))
-          (index-status first-id (count bulk) idxbulkbytes state)
-          (spit-mkdirs
-           (:tee @state)
-           (str first-id ".bulk")
-           idxbulk)))
-      (log/debug "adding indexed total"
-                 (get-in @state [:total :indexed :docs]) "+" (count bulk))
+            (let [idxbulk (make-indexable-bulk bulk)
+                  idxbulkbytes (count (.getBytes idxbulk))
+                  bulk-bytes (reduce + (map #(get-in % [:source :bytes]) bulk))
+                  url (format "%s/%s" (:es @state) "_bulk")]
+              (es/post url idxbulk)
+              (dosync
+               (alter state update-in [:total :indexed :docs] + (count bulk))
+               (alter state update-in [:total :indexed :bytes] + bulk-bytes)
+               (alter state update-in [:total :indexed :wire-bytes]
+                      + idxbulkbytes))
+              (index-status first-id (count bulk) idxbulkbytes state))
+            (log/debug "adding indexed total"
+                       (get-in @state [:total :indexed :docs])
+                       "+" (count bulk)))
+          (when (:tee @state)
+            (let [data (make-json-string bulk)]
+              (spit-mkdirs (:tee @state) (str first-id ".json") data)))))
       (recur q state))))
 
 (defn start-indexer-pool [state]
@@ -209,7 +217,7 @@
                (want-shutdown state)
                (.countDown latch))
         disp (fn []
-               (let [obj (.poll q 5 TimeUnit/SECONDS)]
+               (let [obj (.poll q 120 TimeUnit/SECONDS)]
                  (if-not (and obj
                               (not (= :eof obj))
                               (continue? state))
