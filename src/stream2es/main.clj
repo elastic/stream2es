@@ -204,14 +204,15 @@
   (let [q (LinkedBlockingQueue. size)
         latch (CountDownLatch. workers)
         dispatch (fn []
-                   (f q)
-                   (.countDown latch))
+                   (fn []
+                     (f q)
+                     (.countDown latch)))
         lifecycle (fn []
                     (.await latch)
                     (notify))]
     (dotimes [n workers]
       (.start
-       (Thread. dispatch
+       (Thread. (dispatch)
                 (format "%s-%d" name (inc n)))))
     (.start (Thread. lifecycle (format "%s service" name)))
     (fn [obj]
