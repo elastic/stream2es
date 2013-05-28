@@ -199,27 +199,29 @@
 
 (defn make-queue
   "Create a queue and wire up its dispatcher and lifecycle
-  management. Returns a function which enqueues an object."
-  [name size workers f notify]
+  management. Returns a function which enqueues an object.  When all
+  workers finish, the notifier is called."
+
+  [name size workers f notify initial-state]
   (let [q (LinkedBlockingQueue. size)
         latch (CountDownLatch. workers)
-        dispatch (fn []
+        dispatch (fn [r]
                    (fn []
-                     (f q)
+                     (f q r)
                      (.countDown latch)))
         lifecycle (fn []
                     (.await latch)
-                    (notify))]
+                    (notify ))]
     (dotimes [n workers]
       (.start
-       (Thread. (dispatch)
+       (Thread. (dispatch (ref (merge initial-state {:id n})))
                 (format "%s-%d" name (inc n)))))
     (.start (Thread. lifecycle (format "%s service" name)))
     (fn [obj]
       (.put q obj))))
 
-(defn make-object-processor [state]
-  (fn [stream-object]
+(defn make-object-processor []
+  (fn [state stream-object]
     (let [source (stream/make-source stream-object)]
       (when source
         (dosync
@@ -236,26 +238,30 @@
            (alter state update-in
                   [:items] conj item)))))))
 
+(defn do-work [q local]
+  (loop []
+    (let [obj (.poll q 120 TimeUnit/SECONDS)]
+      (if-not (and obj
+                   (not (= :eof obj))
+                   (continue? state))
+        (want-shutdown state)
+        (do
+          (dosync
+           (alter state update-in
+                  [:total :streamed :docs] inc))
+          (when-not (skip? state)
+            (process state obj)
+            (maybe-index state))
+          (recur))))))
+
 (defn stream! [state]
-  (let [process (make-object-processor state)
+  (let [process (make-object-processor)
         publish (make-queue "processor"
                             (:stream-buffer @state)
                             1
-                            (fn [q]
-                              (let [obj (.poll q 120 TimeUnit/SECONDS)]
-                                (if-not (and obj
-                                             (not (= :eof obj))
-                                             (continue? state))
-                                  (want-shutdown state)
-                                  (do
-                                    (dosync
-                                     (alter state update-in
-                                            [:total :streamed :docs] inc))
-                                    (when-not (skip? state)
-                                      (process obj)
-                                      (maybe-index state))
-                                    (recur q)))))
-                            (:collector-notifier @state))
+                            do-work
+                            (:collector-notifier @state)
+                            @state)
         stream-runner (stream/make-runner (:stream @state) @state publish)]
     ((-> stream-runner :runner))))
 
@@ -272,13 +278,17 @@
                                           :bytes 0}}}))
         collector-latch (CountDownLatch. 1)
         indexer-latch (CountDownLatch. 1)
-        collector-notifier #(.countDown collector-latch)
-        indexer-notifier #(.countDown indexer-latch)
+        collector-notifier (fn [stats]
+                             ;; do something with stats
+                             (.countDown collector-latch))
+        indexer-notifier (fn [stats]
+                           (.countDown indexer-latch))
         indexer (make-queue "indexer"
                             (:queue @state)
                             (:workers @state)
                             #(index-bulk % state)
-                            indexer-notifier)
+                            indexer-notifier
+                            @state)
         printed-done? (atom false)
         end (fn []
               (when-not @printed-done?
