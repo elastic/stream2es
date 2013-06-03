@@ -9,10 +9,10 @@
                  [clj-http "0.6.3"]
                  [org.clojure/clojure "1.5.1"]
                  [org.clojure/tools.cli "0.2.2"]
-                 [org.elasticsearch/elasticsearch-river-wikipedia
-                  "1.2.0-SNAPSHOT"]
                  [org.twitter4j/twitter4j-stream "3.0.3"]
-                 [slingshot "0.10.3"]]
+                 [slingshot "0.10.3"]
+                 [org.clojure/data.xml "0.0.7"]
+                 [org.apache.commons/commons-compress "1.5"]]
   :plugins [[lein-bin "0.3.2"]]
   :main stream2es.main
   :bin {:bootclasspath true})
