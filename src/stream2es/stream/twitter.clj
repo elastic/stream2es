@@ -45,7 +45,8 @@
   (mappings [_ type]
     {(keyword type)
      {:_all {:enabled false}
-      :dynamic_date_formats ["EEE MMM dd HH:mm:ss Z yyyy"]
+      :dynamic_date_formats ["EEE MMM dd HH:mm:ss Z yyyy"
+                             "dateOptionalTime"]
       :properties
       {:entities
        {:properties
