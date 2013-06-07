@@ -1,12 +1,13 @@
 (ns stream2es.stream.twitter
-  (:require [stream2es.stream :refer [new Stream Streamable
+  (:require [cheshire.core :as json]
+            [stream2es.stream :refer [new Stream Streamable
                                       StreamStorage CommandLine]]
-            [cheshire.core :as json])
+            [stream2es.util.data :refer [maybe-update-in]])
   (:import (twitter4j.conf ConfigurationBuilder)
            (twitter4j TwitterStreamFactory RawStreamListener)
            (twitter4j.json DataObjectFactory)))
 
-(declare make-configuration make-callback)
+(declare make-configuration make-callback correct-polygon)
 
 (def bulk-bytes (* 1024 100))
 
@@ -45,15 +46,29 @@
     {(keyword type)
      {:_all {:enabled false}
       :dynamic_date_formats ["EEE MMM dd HH:mm:ss Z yyyy"]
-      :properties {:location {:type "geo_point"}}}}))
+      :properties
+      {:entities
+       {:properties
+        {:hashtags
+         {:properties
+          {:text {:type :string
+                  :index :not_analyzed}}}}}
+       :coordinates
+       {:properties
+        {:coordinates {:type "geo_point"}}}
+       :place
+       {:properties
+        {:bounding_box {:type "geo_shape"}}}}}}))
 
 (extend-type Status
   Streamable
   (make-source [status]
     (let [status* (json/decode (:json status) true)]
       (when (:id status*)
-        (assoc (dissoc status* :id)
-          :_id (:id status*))))))
+        (-> (dissoc status* :id)
+            (assoc :_id (:id status*))
+            (maybe-update-in [:place :bounding_box :coordinates]
+                             correct-polygon))))))
 
 (defmethod new 'twitter [cmd]
   (TwitterStream.))
@@ -70,3 +85,8 @@
     (.setUser user)
     (.setPassword pass)
     (.setJSONStoreEnabled true)))
+
+(defn correct-polygon [polys?]
+  (map (fn [poly]
+         (conj poly (first poly)))
+       polys?))
