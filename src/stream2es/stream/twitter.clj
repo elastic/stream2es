@@ -1,12 +1,16 @@
 (ns stream2es.stream.twitter
   (:require [stream2es.stream :refer [new Stream Streamable
-                                      StreamStorage CommandLine]])
+                                      StreamStorage CommandLine]]
+            [cheshire.core :as json])
   (:import (twitter4j.conf ConfigurationBuilder)
-           (twitter4j TwitterStreamFactory StatusListener Status)))
+           (twitter4j TwitterStreamFactory RawStreamListener)
+           (twitter4j.json DataObjectFactory)))
 
 (declare make-configuration make-callback)
 
 (def bulk-bytes (* 1024 100))
+
+(defrecord Status [json])
 
 (defrecord TwitterStream [])
 
@@ -40,59 +44,29 @@
   (mappings [_ type]
     {(keyword type)
      {:_all {:enabled false}
+      :dynamic_date_formats ["EEE MMM dd HH:mm:ss Z yyyy"]
       :properties {:location {:type "geo_point"}}}}))
 
 (extend-type Status
   Streamable
   (make-source [status]
-    (let [u (.getUser status)
-          place (.getPlace status)
-          geo (.getGeoLocation status)]
-      (merge
-       {:_id (.getId status)
-        :created_at (.getCreatedAt status)
-        :text (.getText status)
-        :user {:id (.getId u)
-               :created_at (.getCreatedAt u)
-               :name (.getName u)
-               :screen_name (.getScreenName u)}}
-       (when place
-         {:place
-          (let [loc (.getGeometryCoordinates place)
-                street (.getStreetAddress place)]
-            (merge
-             {:country (.getCountry place)
-              :country_code (.getCountryCode place)
-              :url (.getURL place)
-              :name (.getFullName place)
-              :type (.getPlaceType place)}
-             (when loc
-               {:location loc})
-             (when street
-               {:street street})))})
-       (when geo
-         {:location
-          {:lat (.getLatitude geo)
-           :lon (.getLongitude geo)}})))))
+    (let [status* (json/decode (:json status) true)]
+      (when (:id status*)
+        (assoc (dissoc status* :id)
+          :_id (:id status*))))))
 
 (defmethod new 'twitter [cmd]
   (TwitterStream.))
 
 (defn make-callback [f]
-  (reify StatusListener
-    (onStatus [_ status]
-      (f status))
-    (onStallWarning [_ stall]
-      (prn (str stall)))
+  (reify RawStreamListener
+    (onMessage [_ json]
+      (f (->Status json)))
     (onException [_ e]
-      (prn (str e)))
-    (onDeletionNotice [_ _])
-    (onTrackLimitationNotice [_ _])))
+      (prn (str e)))))
 
 (defn make-configuration [user pass]
   (doto (ConfigurationBuilder.)
     (.setUser user)
-    (.setPassword pass)))
-
-(defn mapping []
-  )
+    (.setPassword pass)
+    (.setJSONStoreEnabled true)))

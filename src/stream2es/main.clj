@@ -242,19 +242,20 @@
 (defn make-object-processor [state]
   (fn [stream-object]
     (let [source (stream/make-source stream-object)]
-      (dosync
-       (let [item (source2item
-                   (:index @state)
-                   (:type @state)
-                   (get-in @state [:total :streamed :docs])
-                   source)]
-         (alter state update-in
-                [:bytes] + (-> item :source :bytes))
-         (alter state update-in
-                [:total :streamed :bytes]
-                + (-> source str .getBytes count))
-         (alter state update-in
-                [:items] conj item))))))
+      (when source
+        (dosync
+         (let [item (source2item
+                     (:index @state)
+                     (:type @state)
+                     (get-in @state [:total :streamed :docs])
+                     source)]
+           (alter state update-in
+                  [:bytes] + (-> item :source :bytes))
+           (alter state update-in
+                  [:total :streamed :bytes]
+                  + (-> source str .getBytes count))
+           (alter state update-in
+                  [:items] conj item)))))))
 
 (defn stream! [state]
   (let [process (make-object-processor state)
