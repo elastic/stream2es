@@ -243,15 +243,15 @@
     (let [obj (.poll q 120 TimeUnit/SECONDS)]
       (if-not (and obj
                    (not (= :eof obj))
-                   (continue? state))
-        (want-shutdown state)
+                   (continue? local))
+        (want-shutdown local)
         (do
           (dosync
-           (alter state update-in
+           (alter local update-in
                   [:total :streamed :docs] inc))
-          (when-not (skip? state)
-            (process state obj)
-            (maybe-index state))
+          (when-not (skip? local)
+            #_(process local obj)
+            (maybe-index local))
           (recur))))))
 
 (defn stream! [state]
