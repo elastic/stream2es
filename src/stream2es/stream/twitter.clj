@@ -13,6 +13,12 @@
 
 (def bulk-bytes (* 1024 100))
 
+(def date-format
+  "EEE MMM dd HH:mm:ss Z yyyy")
+
+(def locale
+  "en_EN")
+
 (defrecord Status [json])
 
 (defrecord TwitterStream [])
@@ -48,10 +54,28 @@
   (mappings [_ type]
     {(keyword type)
      {:_all {:enabled false}
-      :dynamic_date_formats ["EEE MMM dd HH:mm:ss Z yyyy"
-                             "dateOptionalTime"]
+      :dynamic_date_formats ["dateOptionalTime"]
       :properties
-      {:entities
+      {:created_at {:type :date
+                    :format date-format
+                    :locale locale}
+       :user
+       {:properties
+        {:created_at {:type :date
+                      :format date-format
+                      :locale locale}}}
+
+       :retweeted_status
+       {:properties
+        {:created_at {:type :date
+                      :format date-format
+                      :locale locale}
+         :user
+         {:properties
+          {:created_at {:type :date
+                        :format date-format
+                        :locale locale}}}}}
+       :entities
        {:properties
         {:hashtags
          {:properties
