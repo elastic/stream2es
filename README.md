@@ -48,47 +48,13 @@ If you're at a café or want to use a local copy of the dump, supply `--url`:
 
 ## Options
 
+        % stream2es --help
         Copyright 2013 Elasticsearch
 
         Usage: stream2es [CMD] [OPTS]
 
-        Available commands: wiki, twitter, stdin
+        ..........
 
-        Common opts:
-        -u --es         ES location (default: "http://localhost:9200")
-        -h --help       Display help (default: false)
-           --mappings   Index mappings (default: null)
-        -d --max-docs   Number of docs to index (default: -1)
-           --replace    Delete index before streaming (default: false)
-           --settings   Index settings (default: "{"number_of_replicas":0,"refresh_interval":-1,"number_of_shards":2}")
-        -s --skip       Skip this many docs before indexing (default: 0)
-           --tee        Save bulk request payloads as files in path (default: null)
-        -v --version    Print version (default: false)
-        -w --workers    Number of indexing threads (default: 2)
-
-        TwitterStream opts:
-        -b --bulk-bytes Bulk size in bytes (default: 102400)
-        -i --index      ES index (default: "twitter")
-           --pass       Twitter password (default: "")
-        -q --queue      Size of the internal bulk queue (default: 1000)
-           --stream-buffer Buffer up to this many tweets (default: 1000)
-        -t --type       ES document type (default: "status")
-           --user       Twitter username (default: "")
-
-        StdinStream opts:
-        -b --bulk-bytes Bulk size in bytes (default: 102400)
-        -i --index      ES index (default: "foo")
-        -q --queue      Size of the internal bulk queue (default: 40)
-           --stream-buffer Buffer up to this many docs (default: 100)
-        -t --type       ES type (default: "t")
-
-        WikiStream opts:
-        -b --bulk-bytes Bulk size in bytes (default: 3145728)
-        -i --index      ES index (default: "wiki")
-        -q --queue      Size of the internal bulk queue (default: 40)
-           --stream-buffer Buffer up to this many pages (default: 50)
-        -t --type       ES type (default: "page")
-        -u --url        Wiki dump locator (default: "http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2")
 
 By default, the `refresh_interval` is `-1`, which lets ES refresh as
 it needs to.  You can change it by supplying custom `--settings`:
