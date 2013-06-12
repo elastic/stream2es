@@ -400,7 +400,7 @@
     (catch [:type ::badcmd] _
       (quit (format "Error: %s\n\n%s" (:message &throw-context) (help))))
     (catch [:type ::badarg] _
-      (let [msg (format "%s%s" (:message &throw-context) (help))]
+      (let [msg (format "Error: %s\n\n%s" (:message &throw-context) (help))]
         (quit msg)))
     (catch Object _
       (let [t (:throwable &throw-context)]
