@@ -451,7 +451,7 @@
   (let [interval 2
         retry-count (int (/ wait interval))]
     (loop [remaining retry-count]
-      (when (< (/ remaining retry-count) 0.80)
+      #_(when (< (/ remaining retry-count) 0.80)
         (log/info id "waiting for queue..." remaining))
       (when (pos? remaining)
         (if-let [obj (.poll q interval TimeUnit/SECONDS)]
@@ -512,7 +512,7 @@
                         update-in [:total :processed (:worker-id @state)]
                         (fnil inc 0))
                        (recur))))
-                 (log/info "worker" (:worker-id @state) "done")
+                 #_(log/info "worker" (:worker-id @state) "done")
                  (.countDown latch)))
         lifecycle (fn []
                     (.await latch)
@@ -528,22 +528,18 @@
     publish))
 
 (defn flush-queue? [state]
-  (log/info (:worker-id state) (count (:items state)) (:bulk-count state))
   (>= (count (:items state)) (:bulk-count state)))
 
 (comment
   (let [max-objs -1]
     (def faucet
-      (make-faucet :workers 3
+      (make-faucet :workers 2
                    :process (fn [state obj]
                               (when obj
                                 (swap! state update-in [:items] conj obj))
-                              (log/info "worker"
-                                        (:worker-id @state)
-                                        (str (:items @state)))
                               (when (or (not obj)
                                         (flush-queue? @state))
-                                (log/info "worker"
+                                #_(log/info "worker"
                                           (:worker-id @state)
                                           "processed"
                                           (count (:items @state))
@@ -560,14 +556,14 @@
                                               :eof true
                                               false)]
                                   (not (or stop? enough?))))
-                   :queue-size 1
+                   :queue-size 1000
                    :notify (fn [uptime workers stats]
                              (log/info "notify"
                                        (int (/ uptime 1000))
                                        workers
                                        stats))
                    :init {:bulk-count 5}
-                   :timeout 10
+                   :timeout 5
                    )))
 
 
