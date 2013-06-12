@@ -46,6 +46,22 @@ If you're at a café or want to use a local copy of the dump, supply `--url`:
 
         % ./stream2es wiki --max-docs 5 --url /d/data/enwiki-20121201-pages-articles.xml.bz2
 
+## Twitter Authentication
+
+In order to stream Twitter, you have to create an app and authorize it.
+
+### Create app
+
+Visit (https://dev.twitter.com/apps/new) and create an app.  Call it `stream2es`.  Note the `Consumer key` and `Consumer secret`.
+
+### Authorize app
+
+Now run `stream2es twitter --authorize --key CONSUMER_KEY --secret CONSUMER_SECRET` and complete the dialog.
+
+### Run with new creds
+
+You should now be able to stream twitter with simply `stream2es twitter`.  stream2es will grab the most recent cached credentials from `~/.authinfo.stream2es`.
+
 ## Options
 
         % stream2es --help
