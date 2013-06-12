@@ -31,14 +31,14 @@
      ["-i" "--index" "ES index" :default "twitter"]
      ["-t" "--type" "ES document type" :default "status"]
      ["--authorize" "Create oauth credentials" :flag true :default false]
-     ["--twitter-key" "Twitter app consumer key"]
-     ["--twitter-secret" "Twitter app consumer secret"]
+     ["--key" "Twitter app consumer key, only for --authorize"]
+     ["--secret" "Twitter app consumer secret, only for --authorize"]
      ["--stream-buffer" "Buffer up to this many tweets"
       :default 1000
       :parse-fn #(Integer/parseInt %)]])
   Stream
-  (make-runner [this {:keys [user pass]} handler]
-    (let [conf (.build (make-configuration user pass))
+  (make-runner [this {:keys [authinfo]} handler]
+    (let [conf (.build (make-configuration authinfo))
           stream (doto (-> (TwitterStreamFactory. conf) .getInstance)
                    (.addListener (make-callback handler)))]
       (TwitterStreamRunner. #(.sample stream))))
@@ -84,11 +84,14 @@
     (onException [_ e]
       (prn (str e)))))
 
-(defn make-configuration [user pass]
-  (doto (ConfigurationBuilder.)
-    (.setUser user)
-    (.setPassword pass)
-    (.setJSONStoreEnabled true)))
+(defn make-configuration [authinfo]
+  (let [creds (auth/get-current-creds authinfo :twitter)]
+    (doto (ConfigurationBuilder.)
+      (.setOAuthConsumerKey (:key creds))
+      (.setOAuthConsumerSecret (:secret creds))
+      (.setOAuthAccessToken (:token creds))
+      (.setOAuthAccessTokenSecret (:token-secret creds))
+      (.setJSONStoreEnabled true))))
 
 (defn correct-polygon [polys?]
   (map (fn [poly]
@@ -97,8 +100,8 @@
 
 (defn oauth-consumer [opts]
   (auth/make-oauth-consumer
-   (:twitter-key opts)
-   (:twitter-secret opts)
+   (:key opts)
+   (:secret opts)
    "http://api.twitter.com/oauth/request_token"
    "http://api.twitter.com/oauth/access_token"
    "http://api.twitter.com/oauth/authorize"
@@ -110,5 +113,5 @@
      :created (time/now)
      :token (:oauth_token tok)
      :token-secret (:oauth_token_secret tok)
-     :key (:twitter-key opts)
-     :secret (:twitter-secret opts)}))
+     :key (:key opts)
+     :secret (:secret opts)}))

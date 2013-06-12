@@ -40,7 +40,7 @@
             (filter eligible)
             (sort-by :created)))))
 
-(defn get-current-cred [authinfo type]
+(defn get-current-creds [authinfo type]
   (last (get-creds authinfo type)))
 
 (defn store-creds [authinfo creds]
