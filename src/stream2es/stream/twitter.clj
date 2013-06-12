@@ -54,7 +54,7 @@
   (mappings [_ type]
     {(keyword type)
      {:_all {:enabled false}
-      :dynamic_date_formats ["dateOptionalTime"]
+      :dynamic_date_formats [date-format "dateOptionalTime"]
       :properties
       {:created_at {:type :date
                     :format date-format
