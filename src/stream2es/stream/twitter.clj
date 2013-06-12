@@ -28,14 +28,16 @@
       :parse-fn #(Integer/parseInt %)]
      ["-i" "--index" "ES index" :default "twitter"]
      ["-t" "--type" "ES document type" :default "status"]
-     ["--user" "Twitter username" :default ""]
-     ["--pass" "Twitter password" :default ""]
+     ["--key" "Twitter consumer key" :default ""]
+     ["--secret" "Twitter consumer secret" :default ""]
+     ["--token" "Twitter token" :default ""]
+     ["--token-secret" "Twitter token secret" :default ""]
      ["--stream-buffer" "Buffer up to this many tweets"
       :default 1000
       :parse-fn #(Integer/parseInt %)]])
   Stream
-  (make-runner [this {:keys [user pass]} handler]
-    (let [conf (.build (make-configuration user pass))
+  (make-runner [this {:keys [key secret token token-secret]} handler]
+    (let [conf (.build (make-configuration key secret token token-secret))
           stream (doto (-> (TwitterStreamFactory. conf) .getInstance)
                    (.addListener (make-callback handler)))]
       (TwitterStreamRunner. #(.sample stream))))
@@ -81,10 +83,12 @@
     (onException [_ e]
       (prn (str e)))))
 
-(defn make-configuration [user pass]
+(defn make-configuration [consumer_key, consumer_secret, access_token, access_token_secret]
   (doto (ConfigurationBuilder.)
-    (.setUser user)
-    (.setPassword pass)
+    (.setOAuthConsumerKey consumer_key)
+    (.setOAuthConsumerSecret consumer_secret)
+    (.setOAuthAccessToken access_token)
+    (.setOAuthAccessTokenSecret access_token_secret)
     (.setJSONStoreEnabled true)))
 
 (defn correct-polygon [polys?]
