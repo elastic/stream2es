@@ -6,6 +6,7 @@
             [stream2es.stream.twitter :as twitter])
   (:require [cheshire.core :as json]
             [clojure.tools.cli :refer [cli]]
+            [stream2es.auth :as auth]
             [stream2es.log :as log]
             [stream2es.es :as es]
             [stream2es.size :refer [size-of]]
@@ -17,6 +18,7 @@
             [stream2es.util.time :as time]
             [slingshot.slingshot :refer [try+ throw+]])
   (:import (clojure.lang ExceptionInfo)
+           (java.io FileNotFoundException)
            (java.util.concurrent CountDownLatch
                                  LinkedBlockingQueue
                                  TimeUnit)))
@@ -53,6 +55,11 @@
    ["--replace" "Delete index before streaming" :flag true :default false]
    ["--indexing" "Whether to actually send data to ES"
     :flag true :default true]
+   ["--authinfo" "Stored stream credentials"
+    :default (str
+              (System/getProperty "user.home")
+              (java.io.File/separator)
+              ".authinfo.stream2es")]
    ["-u" "--es" "ES location" :default "http://localhost:9200"]
    ["-h" "--help" "Display help" :flag true :default false]])
 
@@ -394,9 +401,14 @@
           [optmap args _] (parse-opts args main-plus-cmd-specs)]
       (when (:help optmap)
         (quit (help stream)))
+      (when (and (= cmd 'twitter) (:authorize optmap))
+        (auth/store-creds (:authinfo optmap) (twitter/make-creds optmap))
+        (quit "*** Success! Credentials saved to %s" (:authinfo optmap)))
       (if (:version optmap)
         (quit (version))
         (main (assoc optmap :stream stream :cmd cmd))))
+    (catch [:type :stream2es.auth/nocreds] _
+      (quit (format "Error: %s" (:message &throw-context))))
     (catch [:type ::badcmd] _
       (quit (format "Error: %s\n\n%s" (:message &throw-context) (help))))
     (catch [:type ::badarg] _

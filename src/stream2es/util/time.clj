@@ -1,5 +1,9 @@
 (ns stream2es.util.time
-  (:import (SimpleDateFormat)))
+  (:import (java.text SimpleDateFormat)))
+
+(defn now []
+  (.format (SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ssZ")
+           (java.util.Date.)))
 
 (defn minsecs [secs]
   (let [mins (Math/floor (float (/ secs 60)))

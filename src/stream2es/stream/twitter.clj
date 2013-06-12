@@ -1,8 +1,10 @@
 (ns stream2es.stream.twitter
   (:require [cheshire.core :as json]
+            [stream2es.auth :as auth]
             [stream2es.stream :refer [new Stream Streamable
                                       StreamStorage CommandLine]]
-            [stream2es.util.data :refer [maybe-update-in]])
+            [stream2es.util.data :refer [maybe-update-in]]
+            [stream2es.util.time :as time])
   (:import (twitter4j.conf ConfigurationBuilder)
            (twitter4j TwitterStreamFactory RawStreamListener)
            (twitter4j.json DataObjectFactory)))
@@ -28,8 +30,9 @@
       :parse-fn #(Integer/parseInt %)]
      ["-i" "--index" "ES index" :default "twitter"]
      ["-t" "--type" "ES document type" :default "status"]
-     ["--user" "Twitter username" :default ""]
-     ["--pass" "Twitter password" :default ""]
+     ["--authorize" "Create oauth credentials" :flag true :default false]
+     ["--twitter-key" "Twitter app consumer key"]
+     ["--twitter-secret" "Twitter app consumer secret"]
      ["--stream-buffer" "Buffer up to this many tweets"
       :default 1000
       :parse-fn #(Integer/parseInt %)]])
@@ -91,3 +94,21 @@
   (map (fn [poly]
          (conj poly (first poly)))
        polys?))
+
+(defn oauth-consumer [opts]
+  (auth/make-oauth-consumer
+   (:twitter-key opts)
+   (:twitter-secret opts)
+   "http://api.twitter.com/oauth/request_token"
+   "http://api.twitter.com/oauth/access_token"
+   "http://api.twitter.com/oauth/authorize"
+   :hmac-sha1))
+
+(defn make-creds [opts]
+  (let [tok (auth/get-token! (oauth-consumer opts))]
+    {:type :twitter
+     :created (time/now)
+     :token (:oauth_token tok)
+     :token-secret (:oauth_token_secret tok)
+     :key (:twitter-key opts)
+     :secret (:twitter-secret opts)}))
