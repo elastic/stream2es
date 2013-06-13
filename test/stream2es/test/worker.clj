@@ -11,7 +11,8 @@
                                     [:items] (fnil conj #{}) obj))
                   :notify (fn [uptime workers stats]
                             (.countDown latch))
-                  :timeout 5}]
+                  :timeout 5
+                  :workers 3}]
     (make-queue* (merge defaults opts))))
 
 (deftest basic-queue
