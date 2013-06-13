@@ -79,8 +79,9 @@
               process? (fn [& args] true)
               enqueue? (fn [& args] true)
               queue-size 10
-              stop-streaming? (fn [opts obj curr]
-                                (nil-or-eof? obj))}}
+              stop-streaming? (fn [obj curr opts]
+                                (nil-or-eof? obj))
+              workers (int (/ (.availableProcessors (Runtime/getRuntime)) 2))}}
         args
 
         init (if (instance? clojure.lang.Atom init)
@@ -95,11 +96,13 @@
                   (if (dead?)
                     :dead
                     (if (stop-streaming?
-                         opts obj (get-in @totals [:total :streamed :docs]))
+                         obj
+                         (get-in @totals [:total :streamed :docs]) opts)
                       (kill-workers q workers)
                       (do
                         (swap! totals update-in [:total :streamed :docs] inc)
-                        (when (enqueue? obj
+                        (when (enqueue?
+                               obj
                                (get-in @totals [:total :streamed :docs]) opts)
                           (if-not (.offer q obj 5 TimeUnit/SECONDS)
                             (log/info "waiting for space"

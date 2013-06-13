@@ -1,11 +1,12 @@
 (ns stream2es.test.worker
   (:require [clojure.test :refer :all]
+            [stream2es.main :as main]
             [stream2es.worker :refer [make-queue*]])
-  (:import (java.util.concurrent CountDownLatch)))
+  (:import (java.util.concurrent CountDownLatch
+                                 TimeUnit)))
 
 (defn make-make-queue [latch results & {:as opts}]
-  (let [defaults {:workers 1
-                  :process (fn [state obj]
+  (let [defaults {:process (fn [state obj]
                              (swap! results update-in
                                     [:items] (fnil conj #{}) obj))
                   :notify (fn [uptime workers stats]
@@ -31,8 +32,23 @@
                  :opts {:drop 1}
                  :enqueue? (fn [obj curr opts]
                              (> curr (:drop opts))))]
-    (dotimes [n 3]
-      (publish n))
+    (publish :drop-0)
+    (publish :drop-1)
+    (publish :drop-2)
     (publish :eof)
     (.await latch)
-    (is (= @results {:items #{1 2}}))))
+    (is (= @results {:items #{:drop-1 :drop-2}}))))
+
+(deftest terminate-stream
+  (let [results (atom {})
+        latch (CountDownLatch. 1)
+        publish (make-make-queue
+                 latch results
+                 :opts {:take 1
+                        :drop 0}
+                 :stop-streaming? main/stop-streaming?)]
+    (publish :term-0)
+    (publish :term-1)
+    (.await latch 2 TimeUnit/SECONDS)
+    (is (= @results {:items #{:term-0}}))
+    (is (= :dead (publish :another)))))
