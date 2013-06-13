@@ -73,60 +73,56 @@
 
                 opts                    ; optional persistent config
                 ]
-         :or {init (atom {})
+         :or {init {}
               timeout stream-wait
               opts {}
               process? (fn [& args] true)
               enqueue? (fn [& args] true)
               queue-size 10
               stop-streaming? (fn [obj curr opts]
-                                (nil-or-eof? obj))
-              workers (int (/ (.availableProcessors (Runtime/getRuntime)) 2))}}
+                                (nil-or-eof? obj))}}
         args
 
-        init (if (instance? clojure.lang.Atom init)
-               init
-               (atom init))
         start (System/currentTimeMillis)
         q (LinkedBlockingQueue. workers)
         latch (CountDownLatch. workers)
         dead? #(not (= (.getCount latch) workers)) ;; at least one worker died
-        totals (atom {:total {:streamed {:docs 0}}})
+        totals (atom {:streamed {:docs 0}})
         publish (fn [obj]
                   (if (dead?)
                     :dead
                     (if (stop-streaming?
                          obj
-                         (get-in @totals [:total :streamed :docs]) opts)
+                         (get-in @totals [:streamed :docs]) opts)
                       (kill-workers q workers)
                       (do
-                        (swap! totals update-in [:total :streamed :docs] inc)
+                        (swap! totals update-in [:streamed :docs] inc)
                         (when (enqueue?
                                obj
-                               (get-in @totals [:total :streamed :docs]) opts)
+                               (get-in @totals [:streamed :docs]) opts)
                           (if-not (.offer q obj 5 TimeUnit/SECONDS)
                             (log/info "waiting for space"
                                       "to enqueue stream object...")))))))
         work (fn [state]
                (fn []
                  (loop []
-                   (let [obj (poll (:worker-id @state) q timeout)]
+                   (let [obj (poll (:worker-id state) q timeout)]
                      (when-not (or (poison? obj)
                                    (dead?))
                        (when (process? opts
                                        (get-in @totals
-                                               [:total :streamed :docs]))
+                                               [:streamed :docs]))
                          (process state obj)
                          (swap!
                           totals
-                          update-in [:total :processed (:worker-id @state)]
+                          update-in [:processed (:worker-id state)]
                           (fnil inc 0))
                          (swap!
                           totals
-                          update-in [:total :processed :all]
+                          update-in [:processed :all]
                           (fnil inc 0)))
                        (recur))))
-                 (log/info "worker" (:worker-id @state) "done")
+                 (log/info "worker" (:worker-id state) "done")
                  (.countDown latch)))
         lifecycle (fn []
                     (.await latch)
@@ -136,7 +132,7 @@
                             @totals))]
     (dotimes [n workers]
       (.start
-       (Thread. (work (atom (merge @init {:worker-id n})))
+       (Thread. (work (merge init {:worker-id n}))
                 (format "%s-%d" name (inc n)))))
     (.start (Thread. lifecycle (format "%s service" name)))
     publish))
