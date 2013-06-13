@@ -16,6 +16,7 @@
             [stream2es.util.io :as io]
             [stream2es.util.string :as s]
             [stream2es.util.time :as time]
+            [stream2es.worker :as worker]
             [slingshot.slingshot :refer [try+ throw+]])
   (:import (clojure.lang ExceptionInfo)
            (java.io FileNotFoundException)
@@ -25,7 +26,8 @@
 
 (def quit? true)
 
-(def indexing-threads 2)
+(def worker-threads
+  (int (/ (.availableProcessors (Runtime/getRuntime)) 2)))
 
 (def index-settings
   {:number_of_shards 2
@@ -33,7 +35,7 @@
    :refresh_interval -1})
 
 (def opts
-  [["-d" "--max-docs" "Number of docs to index"
+  [["--take" "Number of docs to index"
     :default -1
     :parse-fn #(Integer/parseInt %)]
    ["-q" "--queue" "Size of the internal bulk queue"
@@ -42,12 +44,12 @@
    ["--stream-buffer" "Buffer up to this many pages"
     :default 50
     :parse-fn #(Integer/parseInt %)]
-   ["-s" "--skip" "Skip this many docs before indexing"
+   ["--drop" "Skip this many docs before indexing"
     :default 0
     :parse-fn #(Integer/parseInt %)]
    ["-v" "--version" "Print version" :flag true :default false]
    ["-w" "--workers" "Number of indexing threads"
-    :default indexing-threads
+    :default worker-threads
     :parse-fn #(Integer/parseInt %)]
    ["--tee" "Save bulk request payloads as files in path"]
    ["--mappings" "Index mappings" :default nil]
@@ -107,13 +109,6 @@
   (let [{:keys [bytes bulk-bytes]} @state]
     (when (> bytes bulk-bytes)
       (flush-bulk state))))
-
-(defn continue? [state]
-  (let [curr (get-in @state [:total :streamed :docs])
-        {:keys [skip max-docs]} @state]
-    (if (pos? max-docs)
-      (< curr (+ skip max-docs))
-      true)))
 
 (defn skip? [state]
   (>= (:skip @state) (get-in @state [:total :streamed :docs])))
@@ -197,122 +192,68 @@
               (spit-mkdirs (:tee @state) (str first-id ".json") data)))))
       (recur q state))))
 
-(defn make-queue
-  "Create a queue and wire up its dispatcher and lifecycle
-  management. Returns a function which enqueues an object.  When all
-  workers finish, the notifier is called."
+(defn flush-worker [id items items-bytes indexing? max-bulk-bytes]
+  (when (< max-bulk-bytes items-bytes)
+    (when indexing?
+      #_(es/post ...))
+    (reset! items [])))
 
-  [name size workers f notify initial-state]
-  (let [q (LinkedBlockingQueue. size)
-        latch (CountDownLatch. workers)
-        dispatch (fn [r]
-                   (fn []
-                     (f q r)
-                     (.countDown latch)))
-        lifecycle (fn []
-                    (.await latch)
-                    (notify ))]
-    (dotimes [n workers]
-      (.start
-       (Thread. (dispatch (ref (merge initial-state {:id n})))
-                (format "%s-%d" name (inc n)))))
-    (.start (Thread. lifecycle (format "%s service" name)))
-    (fn [obj]
-      (.put q obj))))
+(defn make-processor [opts]
+  (fn [state n obj]
+    (when-let [source (stream/make-source obj)]
+      (let [item (source2item (:index opts) (:type opts) n source)]
+        (swap! (:items-bytes state) + (-> source str .getBytes count))
+        (swap! (:items state) conj item)))
+    (flush-worker (:worker-id state) (:items state) @(:items-bytes state)
+                  (:indexing opts) (:bulk-bytes opts))
+    ))
 
-(defn make-object-processor []
-  (fn [state stream-object]
-    (let [source (stream/make-source stream-object)]
-      (when source
-        (dosync
-         (let [item (source2item
-                     (:index @state)
-                     (:type @state)
-                     (get-in @state [:total :streamed :docs])
-                     source)]
-           (alter state update-in
-                  [:bytes] + (-> item :source :bytes))
-           (alter state update-in
-                  [:total :streamed :bytes]
-                  + (-> source str .getBytes count))
-           (alter state update-in
-                  [:items] conj item)))))))
+(defn stop-streaming? [obj curr opts]
+  (let [enough? (and
+                 (pos? (:take opts))
+                 (>= curr (+ (:drop opts 0) (:take opts))))]
+    (or enough? (worker/nil-or-eof? obj))))
 
-(defn do-work [q local]
-  (loop []
-    (let [obj (.poll q 120 TimeUnit/SECONDS)]
-      (if-not (and obj
-                   (not (= :eof obj))
-                   (continue? local))
-        (want-shutdown local)
-        (do
-          (dosync
-           (alter local update-in
-                  [:total :streamed :docs] inc))
-          (when-not (skip? local)
-            #_(process local obj)
-            (maybe-index local))
-          (recur))))))
-
-(defn stream! [state]
-  (let [process (make-object-processor)
-        publish (make-queue "processor"
-                            (:stream-buffer @state)
-                            1
-                            do-work
-                            (:collector-notifier @state)
-                            @state)
-        stream-runner (stream/make-runner (:stream @state) @state publish)]
+(defn stream! [opts]
+  (let [publish (worker/make-queue
+                 :name "worker"
+                 :queue-size (:stream-buffer opts)
+                 :workers (:workers opts)
+                 :process (make-processor opts)
+                 :notify (:notifier opts)
+                 :stop-streaming? stop-streaming?
+                 :opts opts)
+        stream-runner (stream/make-runner (:stream opts) opts publish)]
     ((-> stream-runner :runner))))
 
 (defn start! [opts]
-  (let [state (ref
-               (merge opts
-                      {:started-at (System/currentTimeMillis)
-                       :bytes 0
-                       :items []
-                       :total {:indexed {:docs 0
-                                         :bytes 0
-                                         :wire-bytes 0}
-                               :streamed {:docs 0
-                                          :bytes 0}}}))
-        collector-latch (CountDownLatch. 1)
-        indexer-latch (CountDownLatch. 1)
-        collector-notifier (fn [stats]
-                             ;; do something with stats
-                             (.countDown collector-latch))
-        indexer-notifier (fn [stats]
-                           (.countDown indexer-latch))
-        indexer (make-queue "indexer"
-                            (:queue @state)
-                            (:workers @state)
-                            #(index-bulk % state)
-                            indexer-notifier
-                            @state)
-        printed-done? (atom false)
+  (let [printed-done? (atom false)
+        stats (atom {})
+        main-latch (CountDownLatch. 1)
+        notifier (fn [uptime workers _stats]
+                   (swap! stats merge _stats)
+                   (.countDown main-latch))
         end (fn []
               (when-not @printed-done?
                 (log/info
                  (format
                   "streamed %d indexed %d bytes xfer %d"
-                  (-> @state :total :streamed :docs)
-                  (-> @state :total :indexed :docs)
-                  (-> @state :total :indexed :wire-bytes)))
+                  (-> @stats :streamed :docs)
+                  (-> @stats :indexed :docs)
+                  (-> @stats :indexed :wire-bytes)))
                 (reset! printed-done? true)))
         done (fn []
-               (log/debug "waiting for collectors")
-               (.await collector-latch)
-               (log/debug "waiting for indexers")
-               (.await indexer-latch)
+               (log/debug "waiting for streamer")
+               (.await main-latch)
                (end)
                (quit))]
     (.start (Thread. done "lifecycle"))
     (.addShutdownHook
      (Runtime/getRuntime) (Thread. end "SIGTERM handler"))
-    (dosync
-     (alter state assoc :collector-notifier collector-notifier)
-     (alter state assoc :indexer indexer))
-    state))
+    (merge opts
+           {:started-at (System/currentTimeMillis)
+            :notifier notifier
+            :stats @stats})))
 
 (defn parse-opts [args specs]
   (try
@@ -380,18 +321,18 @@
                           :mappings mappings})))))
 
 (defn main [world]
-  (let [state (start! world)]
+  (let [opts (start! world)]
     (try
-      (when (:indexing @state)
-        (ensure-index @state))
+      (when (:indexing opts)
+        (ensure-index opts))
       (log/info
        (format "stream %s%s"
-               (:cmd @state) (if (:url @state)
-                               (format " from %s" (:url @state))
-                               "")))
-      (when (:tee @state)
-        (log/info (format "saving bulks to %s" (:tee @state))))
-      (stream! state)
+               (:cmd opts) (if (:url opts)
+                             (format " from %s" (:url opts))
+                             "")))
+      (when (:tee opts)
+        (log/info (format "saving bulks to %s" (:tee opts))))
+      (stream! opts)
       (catch Exception e
         (.printStackTrace e)
         (quit "stream error: %s" (str e))))))
