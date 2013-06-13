@@ -14,6 +14,7 @@
                  [org.twitter4j/twitter4j-stream "3.0.3"]
                  [slingshot "0.10.3"]
                  [clj-oauth "1.4.0"]]
+  :profiles {:dev {:dependencies [[clj-diff "1.0.0-SNAPSHOT"]]}}
   :plugins [[lein-bin "0.3.2"]]
   :main stream2es.main
   :bin {:bootclasspath true})

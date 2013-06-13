@@ -25,6 +25,46 @@
 
 (defrecord TwitterStreamRunner [runner])
 
+(defn make-mapping [type]
+  {(keyword type)
+   {:_all {:enabled false}
+    :dynamic_date_formats [date-format "dateOptionalTime"]
+    :properties
+    {:created_at {:type :date
+                  :format date-format
+                  :locale locale}
+     :user
+     {:properties
+      {:created_at {:type :date
+                    :format date-format
+                    :locale locale}}}
+
+     :retweeted_status
+     {:properties
+      {:created_at {:type :date
+                    :format date-format
+                    :locale locale}
+       :user
+       {:properties
+        {:created_at {:type :date
+                      :format date-format
+                      :locale locale}}}}}
+     :entities
+     {:properties
+      {:hashtags
+       {:properties
+        {:text {:type :string
+                :index :not_analyzed}}}}}
+     :coordinates
+     {:properties
+      {:coordinates {:type "geo_point"}}}
+     :place
+     {:properties
+      {:bounding_box {:type "geo_shape"}}}}}})
+
+(defn make-settings []
+  {:query.default_field :text})
+
 (extend-type TwitterStream
   CommandLine
   (specs [this]
@@ -50,43 +90,9 @@
       (TwitterStreamRunner. #(.sample stream))))
   StreamStorage
   (settings [_]
-    {:query.default_field :text})
+    (make-settings))
   (mappings [_ type]
-    {(keyword type)
-     {:_all {:enabled false}
-      :dynamic_date_formats [date-format "dateOptionalTime"]
-      :properties
-      {:created_at {:type :date
-                    :format date-format
-                    :locale locale}
-       :user
-       {:properties
-        {:created_at {:type :date
-                      :format date-format
-                      :locale locale}}}
-
-       :retweeted_status
-       {:properties
-        {:created_at {:type :date
-                      :format date-format
-                      :locale locale}
-         :user
-         {:properties
-          {:created_at {:type :date
-                        :format date-format
-                        :locale locale}}}}}
-       :entities
-       {:properties
-        {:hashtags
-         {:properties
-          {:text {:type :string
-                  :index :not_analyzed}}}}}
-       :coordinates
-       {:properties
-        {:coordinates {:type "geo_point"}}}
-       :place
-       {:properties
-        {:bounding_box {:type "geo_shape"}}}}}}))
+    (make-mapping type)))
 
 (extend-type Status
   Streamable

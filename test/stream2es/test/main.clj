@@ -2,7 +2,7 @@
   (:require [cheshire.core :as json]
             [clojure.test :refer :all]
             [stream2es.es]
-            [stream2es.stream.twitter])
+            [stream2es.stream.twitter :as twitter])
   (:require [stream2es.main] :reload))
 
 (deftest help
@@ -35,37 +35,33 @@
                   stream2es.es/exists? (fn [& _]
                                          (swap! ops conj :exists?)
                                          false)]
-      (testing "use defaults"
-        (is (= {:settings (json/decode settings true)
-                :mappings {:thing
-                           {:_all {:enabled false}
-                            :properties
-                            {:location {:type "geo_point"}}}}}
-               (json/decode
-                (stream2es.main/ensure-index
-                 {:replace false
-                  :stream stream
-                  :index "test"
-                  :type "thing"
-                  :settings settings})
-                true))))
+      (let [one {:settings (twitter/make-settings)
+                 :mappings (twitter/make-mapping "thing")}
+            two (json/decode
+                 (stream2es.main/ensure-index
+                  {:replace false
+                   :stream stream
+                   :index "test"
+                   :type "thing"
+                   :settings settings})
+                 true)]
+        (testing "use defaults"
+          (is (not
+               (nil?
+                (get-in one [:mappings :thing :properties :created_at]))))
+          (is (= (get-in one [:mappings :thing
+                              :properties :created_at :format])
+                 (get-in two [:mappings :thing
+                              :properties :created_at :format])))))
 
       (testing "merge defaults"
         (reset! ops [])
-        (let [mappings (json/encode
-                        {:thing
-                         {:properties
-                          {:location {:type "long"}}}})]
-          (is (= {:settings stream2es.main/index-settings
-                  :mappings {:thing
-                             {:properties
-                              {:location {:type "long"}}}}}
-                 (json/decode
-                  (stream2es.main/ensure-index
-                   {:replace true
-                    :stream stream
-                    :index "test"
-                    :type "thing"
-                    :settings settings
-                    :mappings mappings})
-                  true))))))))
+        (let [res (json/decode
+                   (stream2es.main/ensure-index
+                    {:replace true
+                     :stream stream
+                     :index "test"
+                     :type "thing"})
+                   true)]
+          (is (= "text" (get-in res [:settings :query.default_field])))
+          (is (= @ops [:delete :exists? :post])))))))
