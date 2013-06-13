@@ -396,19 +396,24 @@
         (.printStackTrace e)
         (quit "stream error: %s" (str e))))))
 
-(defn -main [& args]
+(defn main-no-command [opts]
+  (when (:help opts)
+    (quit (help)))
+  (when (:version opts)
+    (quit (version))))
+
+(defn main-with-command [args]
   (try+
     (let [[cmd stream] (get-stream args)
           main-plus-cmd-specs (concat opts (stream/specs stream))
           [optmap args _] (parse-opts args main-plus-cmd-specs)]
       (when (:help optmap)
+        ;; user must want help for particular stream
         (quit (help stream)))
       (when (and (= cmd 'twitter) (:authorize optmap))
         (auth/store-creds (:authinfo optmap) (twitter/make-creds optmap))
         (quit "*** Success! Credentials saved to %s" (:authinfo optmap)))
-      (if (:version optmap)
-        (quit (version))
-        (main (assoc optmap :stream stream :cmd cmd))))
+      (main (assoc optmap :stream stream :cmd cmd)))
     (catch [:type :stream2es.auth/nocreds] _
       (quit (format "Error: %s" (:message &throw-context))))
     (catch [:type ::badcmd] _
@@ -421,3 +426,9 @@
         (.printStackTrace t)
         (quit "unexpected exception: %s"
               (str t))))))
+
+(defn -main [& origargs]
+  (let [[opts args _] (parse-opts origargs opts)]
+    (if (empty? args)
+      (main-no-command opts)
+      (main-with-command origargs))))

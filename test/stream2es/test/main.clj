@@ -6,16 +6,22 @@
   (:require [stream2es.main] :reload))
 
 (deftest help
-  (with-redefs [stream2es.main/quit (fn [& args] (first args))
-                stream2es.main/main (fn [_])]
-    (testing "no args"
-      (is (nil? (stream2es.main/-main))))
-    (testing "good cmd"
-      (is (nil? (stream2es.main/-main "stdin"))))
-    (testing "single --help"
-      (is (.startsWith (stream2es.main/-main "--help") "Copyright")))
-    (testing "badcmd"
-      (is (.contains (stream2es.main/-main "foo") "foo is not a")))))
+  (let [res (atom nil)]
+    (with-redefs [stream2es.main/quit (fn [& args]
+                                        (reset! res (first args)))
+                  stream2es.main/main (fn [_])]
+      (testing "no args"
+        (stream2es.main/-main)
+        (is (nil? @res)))
+      (testing "good cmd"
+        (stream2es.main/-main "stdin")
+        (is (nil? @res)))
+      (testing "single --help"
+        (stream2es.main/-main "--help")
+        (is (.startsWith @res "Copyright")))
+      (testing "badcmd"
+        (stream2es.main/-main "foo")
+        (is (.startsWith @res "Error: foo is not a"))))))
 
 (deftest index-settings
   (let [ops (atom [])
