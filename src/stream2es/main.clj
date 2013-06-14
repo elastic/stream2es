@@ -163,8 +163,15 @@
 
 (defn index-buffer [state]
   ;; handle all things bulk->ES related
-  (log/info "worker" (:worker-id state) "would index here")
-  )
+  (let [items (-> state :buf deref :items)
+        first-id (-> items first :meta :index :_id)
+        bulk (make-indexable-bulk items)
+        bytes (count (.getBytes bulk))
+        url (format "%s/%s" (-> state :opts :es) "_bulk")
+        errors (es/post url bulk)]
+    (swap! (:stats state) update-in [:bulk-bytes] (fnil + 0) bytes)
+    ((:status state) first-id (count bulk) bytes state)
+    ))
 
 (defn flush-work-buffer [state]
   (let [items (-> state :buf deref :items)

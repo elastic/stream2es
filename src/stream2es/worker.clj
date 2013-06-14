@@ -154,7 +154,9 @@
                         :worker-id n
                         :buf (atom {:items []
                                     :bytes 0})
-                        :bytes-indexed (atom 0)))
+                        :bytes-indexed (atom 0)
+                        :stats (atom {})
+                        :status ..............))
                 (format "%s-%d" name (inc n)))))
     (.start (Thread. lifecycle (format "%s service" name)))
     publish))
