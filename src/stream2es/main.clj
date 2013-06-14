@@ -246,6 +246,9 @@
                (log/debug "waiting for streamer")
                (.await main-latch)
                (end)
+               ;; with a single worker this helps get all the output written
+               ;; to the terminal
+               (.sleep TimeUnit/MILLISECONDS 10)
                (quit))]
     (.start (Thread. done "lifecycle"))
     (.addShutdownHook
