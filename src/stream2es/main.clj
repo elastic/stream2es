@@ -231,10 +231,10 @@
               (when-not @printed-done?
                 (log/info
                  (format
-                  "streamed %d indexed %d bytes xfer %d"
+                  "streamed %d processed %d bytes xfer %d"
                   (-> @stats :streamed :docs)
-                  (-> @stats :indexed :docs)
-                  (-> @stats :indexed :wire-bytes)))
+                  (-> @stats :processed :all)
+                  (-> @stats :bytes :all)))
                 (reset! printed-done? true)))
         done (fn []
                (log/debug "waiting for streamer")

@@ -120,14 +120,23 @@
                                                  [:streamed :docs]))
                            (process state (get-in
                                            @totals [:streamed :docs]) obj)
-                           (swap!
-                            totals
-                            update-in [:processed (:worker-id state)]
-                            (fnil inc 0))
-                           (swap!
-                            totals
-                            update-in [:processed :all]
-                            (fnil inc 0)))
+                           (let [bytes (-> obj str .getBytes count)]
+                             (swap!
+                              totals
+                              update-in [:bytes (:worker-id state)]
+                              (fnil + 0) (-> obj str .getBytes count))
+                             (swap!
+                              totals
+                              update-in [:bytes :all]
+                              (fnil + 0) (-> obj str .getBytes count))
+                             (swap!
+                              totals
+                              update-in [:processed (:worker-id state)]
+                              (fnil inc 0))
+                             (swap!
+                              totals
+                              update-in [:processed :all]
+                              (fnil inc 0))))
                          (recur)))))
                  (log/info "worker" (:worker-id state) "done")
                  (.countDown latch)))
