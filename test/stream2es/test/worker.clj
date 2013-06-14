@@ -6,7 +6,7 @@
                                  TimeUnit)))
 
 (defn make-make-queue [latch results & {:as opts}]
-  (let [defaults {:process (fn [state obj]
+  (let [defaults {:process (fn [state curr obj]
                              (.sleep TimeUnit/MILLISECONDS (rand-int 100))
                              (swap! results update-in
                                     [:items] (fnil conj #{}) obj))
@@ -54,3 +54,18 @@
     (.await latch 2 TimeUnit/SECONDS)
     (is (= @results {:items #{:term-0}}))
     (is (= :dead (publish :another)))))
+
+(deftest finalize
+  (let [results (atom {})
+        latch (CountDownLatch. 1)
+        publish (make-make-queue
+                 latch results
+                 :opts {:take 1
+                        :drop 0}
+                 :finalize (fn [state]
+                             (swap! results assoc :finalized? :yes)))]
+    (publish :fin-0)
+    (publish :fin-1)
+    (publish :eof)
+    (.await latch 2 TimeUnit/SECONDS)
+    (is (contains? @results :finalized?))))

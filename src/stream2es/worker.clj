@@ -63,6 +63,10 @@
                                         ; whether to process the
                                         ; current msg
 
+                finalize                ; not getting any more
+                                        ; messages, so run this
+                                        ; (useful for flushing buffers
+
                 notify                  ; fn called when consumer
                                         ; finishes
 
@@ -80,7 +84,8 @@
               enqueue? (fn [& args] true)
               queue-size 10
               stop-streaming? (fn [obj curr opts]
-                                (nil-or-eof? obj))}}
+                                (nil-or-eof? obj))
+              finalize (fn [& args])}}
         args
 
         start (System/currentTimeMillis)
@@ -107,21 +112,23 @@
                (fn []
                  (loop []
                    (let [obj (poll (:worker-id state) q timeout)]
-                     (when-not (or (poison? obj)
-                                   (dead?))
-                       (when (process? state
-                                       (get-in @totals
-                                               [:streamed :docs]))
-                         (process state (get-in @totals [:streamed :docs]) obj)
-                         (swap!
-                          totals
-                          update-in [:processed (:worker-id state)]
-                          (fnil inc 0))
-                         (swap!
-                          totals
-                          update-in [:processed :all]
-                          (fnil inc 0)))
-                       (recur))))
+                     (if (or (poison? obj) (dead?))
+                       (finalize state)
+                       (do
+                         (when (process? state
+                                         (get-in @totals
+                                                 [:streamed :docs]))
+                           (process state (get-in
+                                           @totals [:streamed :docs]) obj)
+                           (swap!
+                            totals
+                            update-in [:processed (:worker-id state)]
+                            (fnil inc 0))
+                           (swap!
+                            totals
+                            update-in [:processed :all]
+                            (fnil inc 0)))
+                         (recur)))))
                  (log/info "worker" (:worker-id state) "done")
                  (.countDown latch)))
         lifecycle (fn []
@@ -135,8 +142,8 @@
        (Thread. (work (assoc init
                         :opts opts
                         :worker-id n
-                        :items (atom [])
-                        :items-bytes (atom 0)
+                        :buf (atom [])
+                        :buf-bytes (atom 0)
                         :bytes-indexed (atom 0)))
                 (format "%s-%d" name (inc n)))))
     (.start (Thread. lifecycle (format "%s service" name)))
