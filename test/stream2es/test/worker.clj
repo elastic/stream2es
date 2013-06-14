@@ -7,6 +7,7 @@
 
 (defn make-make-queue [latch results & {:as opts}]
   (let [defaults {:process (fn [state obj]
+                             (.sleep TimeUnit/MILLISECONDS (rand-int 100))
                              (swap! results update-in
                                     [:items] (fnil conj #{}) obj))
                   :notify (fn [uptime workers stats]
