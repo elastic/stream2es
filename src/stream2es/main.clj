@@ -92,37 +92,6 @@
             {:bytes bytes
              :offset offset}))))
 
-(defn flush-bulk [state]
-  (let [itemct (count (:items @state))
-        items (:items @state)]
-    (when (pos? itemct)
-      #_(log/info
-         (format ">--> %d items; %d bytes; first-id %s"
-                 itemct (:bytes @state)
-                 (-> items first :meta :index :_id)))
-      ((:indexer @state) items)
-      (dosync
-       (alter state assoc :bytes 0)
-       (alter state assoc :items [])))))
-
-(defn maybe-index [state]
-  (let [{:keys [bytes bulk-bytes]} @state]
-    (when (> bytes bulk-bytes)
-      (flush-bulk state))))
-
-(defn skip? [state]
-  (>= (:skip @state) (get-in @state [:total :streamed :docs])))
-
-(defn flush-indexer [state]
-  (log/info "flushing index queue")
-  (dotimes [_ (:workers @state)]
-    ((:indexer @state) :stop)))
-
-(defn want-shutdown [state]
-  (log/debug "want shutdown")
-  (flush-bulk state)
-  (flush-indexer state))
-
 (defn spit-mkdirs [path name data]
   (when path
     (let [sub (s/hash-dir 2)
