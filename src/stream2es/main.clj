@@ -192,21 +192,45 @@
               (spit-mkdirs (:tee @state) (str first-id ".json") data)))))
       (recur q state))))
 
-(defn flush-worker [id items items-bytes indexing? max-bulk-bytes]
-  (when (< max-bulk-bytes items-bytes)
+(defn index-buffer [state]
+  ;; handle all things bulk->ES related
+  (log/info "worker" (:worker-id state) "would index here")
+  )
+
+(defn flush-work-buffer [state]
+  (let [items (-> state :buf deref :items)
+        bytes (-> state :buf deref :bytes)]
+    (log/info (:worker-id state) 'flushing bytes 'bytes)
+    (swap! (:buf state)
+           (fn [old]
+             (-> old
+                 (assoc :bytes 0)
+                 (assoc :items []))))
+    state))
+
+(defn flush-worker [state]
+  (let [indexing? (-> state :opts :indexing)]
     (when indexing?
-      #_(es/post ...))
-    (reset! items [])))
+      (log/info 'flush-worker "would es/post")
+      (index-buffer state))
+    (flush-work-buffer state)))
+
+(defn maybe-flush-worker [state]
+  (let [max-bulk-bytes (-> state :opts :bulk-bytes)
+        bytes (-> state :buf deref :bytes)]
+    (when (>= bytes max-bulk-bytes)
+      (flush-worker state))))
 
 (defn make-processor [opts]
   (fn [state n obj]
     (when-let [source (stream/make-source obj)]
       (let [item (source2item (:index opts) (:type opts) n source)]
-        (swap! (:items-bytes state) + (-> source str .getBytes count))
-        (swap! (:items state) conj item)))
-    (flush-worker (:worker-id state) (:items state) @(:items-bytes state)
-                  (:indexing opts) (:bulk-bytes opts))
-    ))
+        (swap! (:buf state)
+               (fn [old]
+                 (-> old
+                     (update-in [:bytes] + (-> source str .getBytes count))
+                     (update-in [:items] conj item))))))
+    (maybe-flush-worker state)))
 
 (defn stop-streaming? [obj curr opts]
   (let [enough? (and
@@ -222,7 +246,8 @@
                  :process (make-processor opts)
                  :notify (:notifier opts)
                  :stop-streaming? stop-streaming?
-                 :opts opts)
+                 :opts opts
+                 :finalize flush-worker)
         stream-runner (stream/make-runner (:stream opts) opts publish)]
     ((-> stream-runner :runner))))
 

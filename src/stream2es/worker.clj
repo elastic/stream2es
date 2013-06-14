@@ -132,6 +132,7 @@
                  (log/info "worker" (:worker-id state) "done")
                  (.countDown latch)))
         lifecycle (fn []
+                    (log/info "waiting for" workers "workers")
                     (.await latch)
                     (log/info "all workers done")
                     (notify (- (System/currentTimeMillis) start)
@@ -142,8 +143,8 @@
        (Thread. (work (assoc init
                         :opts opts
                         :worker-id n
-                        :buf (atom [])
-                        :buf-bytes (atom 0)
+                        :buf (atom {:items []
+                                    :bytes 0})
                         :bytes-indexed (atom 0)))
                 (format "%s-%d" name (inc n)))))
     (.start (Thread. lifecycle (format "%s service" name)))
