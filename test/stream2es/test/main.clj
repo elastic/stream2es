@@ -16,6 +16,9 @@
       (testing "good cmd"
         (stream2es.main/-main "stdin")
         (is (nil? @res)))
+      (testing "stdin args"
+        (stream2es.main/-main "stdin" "--bulk-bytes" "0")
+        (is (nil? @res)))
       (testing "single --help"
         (stream2es.main/-main "--help")
         (is (.startsWith @res "Copyright")))

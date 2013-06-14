@@ -369,7 +369,11 @@
               (str t))))))
 
 (defn -main [& origargs]
-  (let [[opts args _] (parse-opts origargs opts)]
-    (if (empty? args)
-      (main-no-command opts)
+  (try+
+    (let [[opts args _] (parse-opts origargs opts)]
+      (if (empty? args)
+        (main-no-command opts)
+        (main-with-command origargs)))
+    (catch [:type ::badarg] _
+      ;; check and make sure a command doesn't use it
       (main-with-command origargs))))
