@@ -111,15 +111,14 @@
         work (fn [state]
                (fn []
                  (loop []
-                   (let [obj (poll (:worker-id state) q timeout)]
+                   (let [obj (poll (:worker-id state) q timeout)
+                         state (assoc state
+                                 :stats totals)]
                      (if (or (poison? obj) (dead?))
                        (finalize state)
                        (do
-                         (when (process? state
-                                         (get-in @totals
-                                                 [:streamed :docs]))
-                           (process state (get-in
-                                           @totals [:streamed :docs]) obj)
+                         (when (process? state)
+                           (process state obj)
                            (let [bytes (-> obj str .getBytes count)]
                              (swap!
                               totals
@@ -155,8 +154,7 @@
                         :buf (atom {:items []
                                     :bytes 0})
                         :bytes-indexed (atom 0)
-                        :stats (atom {})
-                        :status ..............))
+                        :stats :will-come-later))
                 (format "%s-%d" name (inc n)))))
     (.start (Thread. lifecycle (format "%s service" name)))
     publish))

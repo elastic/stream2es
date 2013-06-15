@@ -161,6 +161,24 @@
               (spit-mkdirs (:tee @state) (str first-id ".json") data)))))
       (recur q state))))
 
+(defn buffer-status [state bulk-count bulk-bytes id]
+  (let [upmillis (- (System/currentTimeMillis)
+                    (-> state :opts :started-at))
+        upsecs (float (/ upmillis 1e3))
+        index-doc-rate (/ (get-in @(:stats state)
+                                  [:processed :all]) upsecs)
+        index-kbyte-rate (/
+                          (/ (get-in @(:stats state)
+                                     [:bytes :all]) 1024)
+                          upsecs)]
+    (log/info
+     (format "%s %.1fd/s %.1fK/s %d %d %d%s"
+             (time/minsecs upsecs)
+             index-doc-rate index-kbyte-rate
+             (get-in @(:stats state) [:processed :all])
+             bulk-count bulk-bytes
+             (if id (format " %s" id) "")))))
+
 (defn index-buffer [state]
   ;; handle all things bulk->ES related
   (let [items (-> state :buf deref :items)
@@ -170,13 +188,12 @@
         url (format "%s/%s" (-> state :opts :es) "_bulk")
         errors (es/post url bulk)]
     (swap! (:stats state) update-in [:bulk-bytes] (fnil + 0) bytes)
-    ((:status state) first-id (count bulk) bytes state)
+    ((:status state) state (count items) bytes first-id)
     ))
 
 (defn flush-work-buffer [state]
   (let [items (-> state :buf deref :items)
         bytes (-> state :buf deref :bytes)]
-    (log/info (:worker-id state) 'flushing bytes 'bytes)
     (swap! (:buf state)
            (fn [old]
              (-> old
@@ -187,7 +204,6 @@
 (defn flush-worker [state]
   (let [indexing? (-> state :opts :indexing)]
     (when indexing?
-      (log/info 'flush-worker "would es/post")
       (index-buffer state))
     (flush-work-buffer state)))
 
@@ -198,9 +214,11 @@
       (flush-worker state))))
 
 (defn make-processor [opts]
-  (fn [state n obj]
+  (fn [state obj]
     (when-let [source (stream/make-source obj)]
-      (let [item (source2item (:index opts) (:type opts) n source)]
+      (let [item (source2item (:index opts) (:type opts)
+                              (get-in @(:stats state)
+                                      [:streamed :docs]) source)]
         (swap! (:buf state)
                (fn [old]
                  (-> old
@@ -223,7 +241,8 @@
                  :notify (:notifier opts)
                  :stop-streaming? stop-streaming?
                  :opts opts
-                 :finalize flush-worker)
+                 :finalize flush-worker
+                 :init {:status buffer-status})
         stream-runner (stream/make-runner (:stream opts) opts publish)]
     ((-> stream-runner :runner))))
 
