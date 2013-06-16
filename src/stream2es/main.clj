@@ -26,6 +26,10 @@
 
 (def quit? true)
 
+;; small fudge factor for meta to avoid counting it
+(def byte-adjust
+  1.03)
+
 (def worker-threads
   (int (/ (.availableProcessors (Runtime/getRuntime)) 2)))
 
@@ -110,11 +114,14 @@
        (apply str)))
 
 (defn make-json-string [items]
-  (->> items
-       (map :source)
-       (map json/encode)
-       (interpose "\n")
-       (apply str)))
+  (let [replace-id (fn [item]
+                     (merge (:source item)
+                            {:_id (-> item :meta :index :_id)}))]
+    (->> items
+         (map replace-id)
+         (map json/encode)
+         (interpose "\n")
+         (apply str))))
 
 (defn index-status [id bulk-count bulk-bytes state]
   (let [upmillis (- (System/currentTimeMillis) (:started-at @state))
@@ -172,8 +179,9 @@
                                      [:bytes :all]) 1024)
                           upsecs)]
     (log/info
-     (format "%s %.1fd/s %.1fK/s %d %d %d%s"
+     (format "%s %d %.1fd/s %.1fK/s %d %d %d%s"
              (time/minsecs upsecs)
+             (:worker-id state)
              index-doc-rate index-kbyte-rate
              (get-in @(:stats state) [:processed :all])
              bulk-count bulk-bytes
@@ -182,18 +190,24 @@
 (defn index-buffer [state]
   ;; handle all things bulk->ES related
   (let [items (-> state :buf deref :items)
-        first-id (-> items first :meta :index :_id)
         bulk (make-indexable-bulk items)
-        bytes (count (.getBytes bulk))
         url (format "%s/%s" (-> state :opts :es) "_bulk")
         errors (es/post url bulk)]
-    (swap! (:stats state) update-in [:bulk-bytes] (fnil + 0) bytes)
-    ((:status state) state (count items) bytes first-id)
+    ;; implement error handling...
     ))
+
+(defn tee-buffer [state]
+  (let [items (-> state :buf deref :items)
+        first-id (-> items first :meta :index :_id)
+        data (make-json-string items)]
+    (spit-mkdirs (-> state :opts :tee) (str first-id ".json") data)))
 
 (defn flush-work-buffer [state]
   (let [items (-> state :buf deref :items)
-        bytes (-> state :buf deref :bytes)]
+        bytes (int (* byte-adjust (-> state :buf deref :bytes)))
+        first-id (-> items first :meta :index :_id)]
+    (swap! (:stats state) update-in [:bulk-bytes] (fnil + 0) bytes)
+    ((:status state) state (count items) bytes first-id)
     (swap! (:buf state)
            (fn [old]
              (-> old
@@ -205,6 +219,8 @@
   (let [indexing? (-> state :opts :indexing)]
     (when indexing?
       (index-buffer state))
+    (when (-> state :opts :tee)
+      (tee-buffer state))
     (flush-work-buffer state)))
 
 (defn maybe-flush-worker [state]
