@@ -123,51 +123,6 @@
          (interpose "\n")
          (apply str))))
 
-(defn index-status [id bulk-count bulk-bytes state]
-  (let [upmillis (- (System/currentTimeMillis) (:started-at @state))
-        upsecs (float (/ upmillis 1e3))
-        index-doc-rate (/ (get-in @state [:total :indexed :docs]) upsecs)
-        index-kbyte-rate (/
-                          (/ (get-in @state [:total :indexed :wire-bytes]) 1024)
-                          upsecs)
-        #_stream-doc-rate #_(/ (get-in @state [:total :streamed :docs]) upsecs)
-        #_stream-kbyte-rate #_(/
-                               (/ (get-in @state [:total :streamed :bytes])
-                                  1024)
-                               upsecs)]
-    (log/info
-     (format "%s %.1fd/s %.1fK/s %d %d %d%s"
-             (time/minsecs upsecs)
-             index-doc-rate index-kbyte-rate
-             (get-in @state [:total :indexed :docs])
-             bulk-count bulk-bytes
-             (if id (format " %s" id) "")))))
-
-(defn index-bulk [q state]
-  (let [bulk (.take q)]
-    (when-not (= :stop bulk)
-      (when (and (sequential? bulk) (pos? (count bulk)))
-        (let [first-id (-> bulk first :meta :index :_id)]
-          (when (:indexing @state)
-            (let [idxbulk (make-indexable-bulk bulk)
-                  idxbulkbytes (count (.getBytes idxbulk))
-                  bulk-bytes (reduce + (map #(get-in % [:source :bytes]) bulk))
-                  url (format "%s/%s" (:es @state) "_bulk")]
-              (es/post url idxbulk)
-              (dosync
-               (alter state update-in [:total :indexed :docs] + (count bulk))
-               (alter state update-in [:total :indexed :bytes] + bulk-bytes)
-               (alter state update-in [:total :indexed :wire-bytes]
-                      + idxbulkbytes))
-              (index-status first-id (count bulk) idxbulkbytes state))
-            (log/debug "adding indexed total"
-                       (get-in @state [:total :indexed :docs])
-                       "+" (count bulk)))
-          (when (:tee @state)
-            (let [data (make-json-string bulk)]
-              (spit-mkdirs (:tee @state) (str first-id ".json") data)))))
-      (recur q state))))
-
 (defn buffer-status [state bulk-count bulk-bytes id]
   (let [upmillis (- (System/currentTimeMillis)
                     (-> state :opts :started-at))
