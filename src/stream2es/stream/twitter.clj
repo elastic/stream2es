@@ -90,8 +90,23 @@
        {:properties
         {:coordinates {:type "geo_point"}}}
        :place
-       {:properties
-        {:bounding_box {:type "geo_shape"}}}}}}))
+       {:dynamic true
+        :properties
+        {:bounding_box {:type "geo_shape"}
+         :country {:type :multi_field
+                   :fields {:country
+                            {:type :string
+                             :index :analyzed}
+                            :keyword
+                            {:type :string
+                             :index :not_analyzed}}}
+         :country_code {:type :multi_field
+                        :fields {:country_code
+                                 {:type :string
+                                  :index :analyzed}
+                                 :keyword
+                                 {:type :string
+                                  :index :not_analyzed}}}}}}}}))
 
 (extend-type Status
   Streamable
