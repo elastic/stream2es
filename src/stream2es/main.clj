@@ -146,11 +146,14 @@
        (apply str)))
 
 (defn make-json-string [items]
-  (->> items
-       (map :source)
-       (map json/encode)
-       (interpose "\n")
-       (apply str)))
+  (let [replace-id (fn [item]
+                     (merge (:source item)
+                            {:_id (-> item :meta :index :_id)}))]
+    (->> items
+         (map replace-id)
+         (map json/encode)
+         (interpose "\n")
+         (apply str))))
 
 (defn index-status [id bulk-count bulk-bytes state]
   (let [upmillis (- (System/currentTimeMillis) (:started-at @state))
