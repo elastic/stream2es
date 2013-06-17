@@ -16,9 +16,6 @@
 (def weird-twitter-date-format
   "EEE MMM dd HH:mm:ss Z yyyy")
 
-(def iso8601-format
-  "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
-
 (def locale
   "en_EN")
 
@@ -58,8 +55,8 @@
     {(keyword type)
      {:_all {:enabled false}
       :dynamic_date_formats [weird-twitter-date-format
-                             iso8601-format
-                             "dateOptionalTime"]
+                             "date_time"
+                             "date_optional_time"]
       :properties
       {:created_at {:type :date
                     :format weird-twitter-date-format
