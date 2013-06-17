@@ -13,8 +13,11 @@
 
 (def bulk-bytes (* 1024 100))
 
-(def date-format
+(def weird-twitter-date-format
   "EEE MMM dd HH:mm:ss Z yyyy")
+
+(def iso8601-format
+  "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
 
 (def locale
   "en_EN")
@@ -54,26 +57,28 @@
   (mappings [_ type]
     {(keyword type)
      {:_all {:enabled false}
-      :dynamic_date_formats [date-format "dateOptionalTime"]
+      :dynamic_date_formats [weird-twitter-date-format
+                             iso8601-format
+                             "dateOptionalTime"]
       :properties
       {:created_at {:type :date
-                    :format date-format
+                    :format weird-twitter-date-format
                     :locale locale}
        :user
        {:properties
         {:created_at {:type :date
-                      :format date-format
+                      :format weird-twitter-date-format
                       :locale locale}}}
 
        :retweeted_status
        {:properties
         {:created_at {:type :date
-                      :format date-format
+                      :format weird-twitter-date-format
                       :locale locale}
          :user
          {:properties
           {:created_at {:type :date
-                        :format date-format
+                        :format weird-twitter-date-format
                         :locale locale}}}}}
        :entities
        {:properties
