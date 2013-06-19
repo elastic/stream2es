@@ -44,11 +44,13 @@
   (last (get-creds authinfo type)))
 
 (defn store-creds [authinfo creds]
-  (let [current (get-creds authinfo)]
+  (let [current (try+
+                  (get-creds authinfo)
+                  (catch [:type ::nocreds]
+                      []))]
     (->> creds
-         (conj (get-creds authinfo))
+         (conj current)
          pp/pprint
          with-out-str
          (spit authinfo)))
   (uio/chmod-0600 authinfo))
-
