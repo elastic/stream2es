@@ -3,13 +3,13 @@
             [stream2es.auth :as auth]
             [stream2es.stream :refer [new Stream Streamable
                                       StreamStorage CommandLine]]
-            [stream2es.util.data :refer [maybe-update-in]]
+            [stream2es.util.data :refer [maybe-update-in remove-in-if]]
             [stream2es.util.time :as time])
   (:import (twitter4j.conf ConfigurationBuilder)
            (twitter4j TwitterStreamFactory RawStreamListener)
            (twitter4j.json DataObjectFactory)))
 
-(declare make-configuration make-callback correct-polygon)
+(declare make-configuration make-callback correct-polygon single-point?)
 
 (def bulk-bytes (* 1024 100))
 
@@ -129,6 +129,8 @@
       (when (:id status*)
         (-> (dissoc status* :id)
             (assoc :_id (:id status*))
+            (remove-in-if [:place :bounding_box] nil?)
+            (remove-in-if [:place :bounding_box] single-point?)
             (maybe-update-in [:place :bounding_box :coordinates]
                              correct-polygon))))))
 
@@ -155,6 +157,9 @@
   (map (fn [poly]
          (conj poly (first poly)))
        polys?))
+
+(defn single-point? [box]
+  (= 1 (count (into #{} (:coordinates box)))))
 
 (defn oauth-consumer [opts]
   (auth/make-oauth-consumer
