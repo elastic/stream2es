@@ -25,12 +25,12 @@ You can also index the latest Wikipedia article dump.
         create index tmp
         stream wiki from http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-art
         icles.xml.bz2
-        00:04.984 44.7d/s 622.7K/s 223 223 3177989 10
-        00:07.448 54.1d/s 838.1K/s 403 180 3213889 794
-        00:09.715 63.0d/s 961.4K/s 612 209 3172256 1081
-        00:12.000 73.2d/s 1036.1K/s 878 266 3167860 1404
-        00:14.385 75.2d/s 1079.9K/s 1082 204 3174907 1756
-        ^Cstreamed 1158 docs 1082 bytes xfer 15906901
+        00:04.984 44.7d/s 622.7K/s 223 223 3177989 0 10
+        00:07.448 54.1d/s 838.1K/s 403 180 3213889 0 794
+        00:09.715 63.0d/s 961.4K/s 612 209 3172256 0 1081
+        00:12.000 73.2d/s 1036.1K/s 878 266 3167860 0 1404
+        00:14.385 75.2d/s 1079.9K/s 1082 204 3174907 0 1756
+        ^Cstreamed 1158 docs 1082 bytes xfer 15906901 errors 0
 
 What is the output telling me?
 
@@ -40,6 +40,7 @@ What is the output telling me?
               878: Total docs indexed so far
               266: Docs in bulk
           3167860: Total JSON bytes of docs in the bulk
+                0: Total docs that have had indexing errors so far
              1404: The _id of the first doc in the bulk
 
 If you're at a café or want to use a local copy of the dump, supply `--url`:
