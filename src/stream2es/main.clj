@@ -168,11 +168,12 @@
                                   1024)
                                upsecs)]
     (log/info
-     (format "%s %.1fd/s %.1fK/s %d %d %d%s"
+     (format "%s %.1fd/s %.1fK/s %d %d %d %d%s"
              (time/minsecs upsecs)
              index-doc-rate index-kbyte-rate
              (get-in @state [:total :indexed :docs])
              bulk-count bulk-bytes
+             (get-in @state [:total :errors])
              (if id (format " %s" id) "")))))
 
 (defn index-bulk [q state]
@@ -184,13 +185,14 @@
             (let [idxbulk (make-indexable-bulk bulk)
                   idxbulkbytes (count (.getBytes idxbulk))
                   bulk-bytes (reduce + (map #(get-in % [:source :bytes]) bulk))
-                  url (format "%s/%s" (:es @state) "_bulk")]
-              (es/post url idxbulk)
+                  url (format "%s/%s" (:es @state) "_bulk")
+                  errors (es/error-capturing-bulk url bulk make-indexable-bulk)]
               (dosync
                (alter state update-in [:total :indexed :docs] + (count bulk))
                (alter state update-in [:total :indexed :bytes] + bulk-bytes)
                (alter state update-in [:total :indexed :wire-bytes]
-                      + idxbulkbytes))
+                      + idxbulkbytes)
+               (alter state update-in [:total :errors] (fnil + 0) errors))
               (index-status first-id (count bulk) idxbulkbytes state))
             (log/debug "adding indexed total"
                        (get-in @state [:total :indexed :docs])
@@ -294,10 +296,11 @@
               (when-not @printed-done?
                 (log/info
                  (format
-                  "streamed %d indexed %d bytes xfer %d"
+                  "streamed %d indexed %d bytes xfer %d errors %d"
                   (-> @state :total :streamed :docs)
                   (-> @state :total :indexed :docs)
-                  (-> @state :total :indexed :wire-bytes)))
+                  (-> @state :total :indexed :wire-bytes)
+                  (-> @state :total :errors)))
                 (reset! printed-done? true)))
         done (fn []
                (log/debug "waiting for collectors")
