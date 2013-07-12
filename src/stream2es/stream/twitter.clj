@@ -71,6 +71,8 @@
   (mappings [_ type]
     {(keyword type)
      {:_all {:enabled false}
+      :_size {:enabled true
+              :store "yes"}
       :dynamic_date_formats [weird-twitter-date-format
                              "date_time"
                              "date_optional_time"]
