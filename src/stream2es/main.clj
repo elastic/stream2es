@@ -36,7 +36,7 @@
   [["-d" "--max-docs" "Number of docs to index"
     :default -1
     :parse-fn #(Integer/parseInt %)]
-   ["-q" "--queue" "Size of the internal bulk queue"
+   ["-q" "--queue-size" "Size of the internal bulk queue"
     :default 40
     :parse-fn #(Integer/parseInt %)]
    ["--stream-buffer" "Buffer up to this many pages"
@@ -203,7 +203,7 @@
       (recur q state))))
 
 (defn start-indexer-pool [state]
-  (let [q (LinkedBlockingQueue. (:queue @state))
+  (let [q (LinkedBlockingQueue. (:queue-size @state))
         latch (CountDownLatch. (:workers @state))
         disp (fn []
                (index-bulk q state)

@@ -1,18 +1,19 @@
-(ns stream2es.stream.stdin
+(ns stream2es.stream.queue
   (:require [cheshire.core :as json]
-            [clojure.java.io :as io]
+            [clojure.java.io :as jio]
+            [stream2es.util.io :as io]
             [stream2es.stream :refer [new Stream
                                       Streamable CommandLine
                                       StreamStorage]]))
 
-(defrecord StdinStream [])
+(defrecord QueueStream [])
 
-(defrecord StdinStreamRunner [runner])
+(defrecord QueueStreamRunner [runner])
 
 (defmethod new 'stdin [_]
-  (StdinStream.))
+  (QueueStream.))
 
-(extend-type StdinStream
+(extend-type QueueStream
   CommandLine
   (specs [_]
     [["-b" "--bulk-bytes" "Bulk size in bytes"
@@ -25,17 +26,20 @@
      ["-t" "--type" "ES type" :default "t"]
      ["--stream-buffer" "Buffer up to this many docs"
       :default 100
-      :parse-fn #(Integer/parseInt %)]])
+      :parse-fn #(Integer/parseInt %)]
+     ["--broker" "Broker url"]
+     ["--exchange" "Broker exchange"]
+     ["--queue" "Broker queue"]])
   Stream
   (make-runner [_ opts handler]
-    (StdinStreamRunner.
+    (QueueStreamRunner.
      (fn []
-       (loop [in (io/reader *in*)]
-         (if-not (.ready *in*)
-           (handler :eof)
-           (do
-             (handler (.readLine *in*))
-             (recur in)))))))
+       (let [q (work/->Queue (:broker opts) (:exchange opts) (:queue opts))]
+         (work/consume-poll q (fn [msg]
+                                (map handler
+                                     (line-seq
+                                      (io/gz-reader
+                                       (-> msg :_source :source))))))))))
   StreamStorage
   (settings [_]
     {:number_of_shards 2
@@ -44,8 +48,3 @@
     {(keyword type)
      {:_all {:enabled false}
       :properties {}}}))
-
-(extend-type String
-  Streamable
-  (make-source [doc]
-    (json/decode doc true)))
