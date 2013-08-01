@@ -1,7 +1,9 @@
 (ns stream2es.stream.queue
   (:require [cheshire.core :as json]
             [clojure.java.io :as jio]
+            [workroom.core :as work]
             [stream2es.util.io :as io]
+            [stream2es.log :as log]
             [stream2es.stream :refer [new Stream
                                       Streamable CommandLine
                                       StreamStorage]]))
@@ -10,7 +12,7 @@
 
 (defrecord QueueStreamRunner [runner])
 
-(defmethod new 'stdin [_]
+(defmethod new 'queue [_]
   (QueueStream.))
 
 (extend-type QueueStream
@@ -35,11 +37,13 @@
     (QueueStreamRunner.
      (fn []
        (let [q (work/->Queue (:broker opts) (:exchange opts) (:queue opts))]
+         (log/log 'consume-poll (:broker opts) (:exchange opts) (:queue opts))
          (work/consume-poll q (fn [msg]
-                                (map handler
-                                     (line-seq
-                                      (io/gz-reader
-                                       (-> msg :_source :source))))))))))
+                                (doall
+                                 (map handler
+                                      (line-seq
+                                       (io/gz-reader
+                                        (-> msg :_source :source)))))))))))
   StreamStorage
   (settings [_]
     {:number_of_shards 2
