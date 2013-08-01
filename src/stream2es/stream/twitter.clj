@@ -34,7 +34,7 @@
     [["-b" "--bulk-bytes" "Bulk size in bytes"
       :default bulk-bytes
       :parse-fn #(Integer/parseInt %)]
-     ["-q" "--queue" "Size of the internal bulk queue"
+     ["-q" "--queue-size" "Size of the internal bulk queue"
       :default 1000
       :parse-fn #(Integer/parseInt %)]
      ["-i" "--index" "ES index" :default "twitter"]

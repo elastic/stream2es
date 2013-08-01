@@ -3,7 +3,8 @@
   ;; Need to require these because of the multimethod in s.stream.
   (:require [stream2es.stream.wiki :as wiki]
             [stream2es.stream.stdin :as stdin]
-            [stream2es.stream.twitter :as twitter])
+            [stream2es.stream.twitter :as twitter]
+            [stream2es.stream.queue :as queue])
   (:require [cheshire.core :as json]
             [clojure.tools.cli :refer [cli]]
             [stream2es.auth :as auth]
@@ -36,11 +37,14 @@
   [["-d" "--max-docs" "Number of docs to index"
     :default -1
     :parse-fn #(Integer/parseInt %)]
-   ["-q" "--queue" "Size of the internal bulk queue"
+   ["-q" "--queue-size" "Size of the internal bulk queue"
     :default 40
     :parse-fn #(Integer/parseInt %)]
    ["--stream-buffer" "Buffer up to this many pages"
     :default 50
+    :parse-fn #(Integer/parseInt %)]
+   ["--stream-timeout" "Wait seconds for data on the stream"
+    :default -1
     :parse-fn #(Integer/parseInt %)]
    ["-s" "--skip" "Skip this many docs before indexing"
     :default 0
@@ -203,7 +207,7 @@
       (recur q state))))
 
 (defn start-indexer-pool [state]
-  (let [q (LinkedBlockingQueue. (:queue @state))
+  (let [q (LinkedBlockingQueue. (:queue-size @state))
         latch (CountDownLatch. (:workers @state))
         disp (fn []
                (index-bulk q state)
@@ -229,7 +233,10 @@
                (want-shutdown state)
                (.countDown latch))
         disp (fn []
-               (let [obj (.poll q 120 TimeUnit/SECONDS)]
+               (let [obj (if (pos? (:stream-timeout @state))
+                           (.poll q (:stream-timeout @state)
+                                  TimeUnit/SECONDS)
+                           (.take q))]
                  (if-not (and obj
                               (not (= :eof obj))
                               (continue? state))

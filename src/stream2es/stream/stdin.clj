@@ -18,7 +18,7 @@
     [["-b" "--bulk-bytes" "Bulk size in bytes"
       :default (* 1024 100)
       :parse-fn #(Integer/parseInt %)]
-     ["-q" "--queue" "Size of the internal bulk queue"
+     ["-q" "--queue-size" "Size of the internal bulk queue"
       :default 40
       :parse-fn #(Integer/parseInt %)]
      ["-i" "--index" "ES index" :default "foo"]

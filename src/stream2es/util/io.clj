@@ -1,9 +1,10 @@
 (ns stream2es.util.io
   (:require [clojure.java.io :as io])
-  (:import (java.util.zip GZIPOutputStream)
+  (:import (java.util.zip GZIPInputStream GZIPOutputStream)
            (java.net URL)
            (java.nio.file.attribute PosixFilePermission)
-           (java.nio.file FileSystems Files)))
+           (java.nio.file FileSystems Files)
+           (org.tukaani.xz XZInputStream)))
 
 (def file io/file)
 
@@ -14,6 +15,12 @@
   (let [gz (-> f io/output-stream GZIPOutputStream.)]
     (with-open [#^java.io.Writer w (apply io/writer gz options)]
       (.write w (str content)))))
+
+(defn gz-reader [uri]
+  (-> uri io/input-stream GZIPInputStream. io/reader))
+
+(defn xz-reader [uri]
+  (-> uri io/input-stream XZInputStream. io/reader))
 
 (defn get-path [one & more]
   (.getPath (FileSystems/getDefault) one (into-array String more)))
