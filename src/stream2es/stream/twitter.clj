@@ -54,6 +54,7 @@
   StreamStorage
   (settings [_]
     {:query.default_field :text
+     :index.refresh_interval "5s"
      :index {:analysis
              {:analyzer
               {:fulltext_analyzer
