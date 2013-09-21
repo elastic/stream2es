@@ -9,8 +9,7 @@
                  [clj-http "0.6.3"]
                  [org.clojure/clojure "1.5.1"]
                  [org.clojure/tools.cli "0.2.2"]
-                 [org.elasticsearch/elasticsearch-river-wikipedia
-                  "1.2.0-SNAPSHOT"]
+                 [org.elasticsearch/elasticsearch-river-wikipedia "1.2.0"]
                  [org.twitter4j/twitter4j-stream "3.0.3"]
                  [slingshot "0.10.3"]
                  [clj-oauth "1.4.0"]
