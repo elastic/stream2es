@@ -40,10 +40,9 @@
      ["-i" "--index" "ES index" :default "twitter"]
      ["-t" "--type" "ES document type" :default "status"]
      ["--authorize" "Create oauth credentials" :flag true :default false]
-     ["--stream-type" "Supposed to create Twitter stream of type filter" :default false :flag true]
      ["--track" "Comma-separated list of phrases to determine what Tweets will be delivered on the stream."]
      ["--key" "Twitter app consumer key, only for --authorize"]
-     ["--secret" "Twitter app consumer secret, only for --authorize"]  
+     ["--secret" "Twitter app consumer secret, only for --authorize"]
      ["--stream-buffer" "Buffer up to this many tweets"
       :default 1000
       :parse-fn #(Integer/parseInt %)]])
