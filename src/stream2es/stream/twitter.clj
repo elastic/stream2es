@@ -54,7 +54,7 @@
           stream (doto (-> (TwitterStreamFactory. conf) .getInstance)
                    (.addListener (make-callback handler)))]
       (when (:track opts)
-        (.track filter (into-array (clojure.string/split (:track opts) #"\s+"))))
+        (.track filter (into-array (clojure.string/split (:track opts) #",+"))))
       (if (:track opts)
         (TwitterStreamRunner. #(.filter stream filter))
         (TwitterStreamRunner. #(.sample stream)))))
