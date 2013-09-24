@@ -6,7 +6,7 @@
             [stream2es.util.data :refer [maybe-update-in remove-in-if]]
             [stream2es.util.time :as time])
   (:import (twitter4j.conf ConfigurationBuilder)
-           (twitter4j TwitterStreamFactory RawStreamListener)
+           (twitter4j TwitterStreamFactory RawStreamListener FilterQuery)
            (twitter4j.json DataObjectFactory)))
 
 (declare make-configuration make-callback correct-polygon single-point?)
@@ -40,17 +40,26 @@
      ["-i" "--index" "ES index" :default "twitter"]
      ["-t" "--type" "ES document type" :default "status"]
      ["--authorize" "Create oauth credentials" :flag true :default false]
+     ["--stream-type" "Supposed to create Twitter stream of type filter" :default false :flag true]
+     ["--track" "Comma-separated list of phrases to determine what Tweets will be delivered on the stream."]
      ["--key" "Twitter app consumer key, only for --authorize"]
-     ["--secret" "Twitter app consumer secret, only for --authorize"]
+     ["--secret" "Twitter app consumer secret, only for --authorize"]  
      ["--stream-buffer" "Buffer up to this many tweets"
       :default 1000
       :parse-fn #(Integer/parseInt %)]])
   Stream
-  (make-runner [this {:keys [authinfo]} handler]
-    (let [conf (.build (make-configuration authinfo))
+  (make-runner [this opts handler]
+    (let [authinfo (:authinfo opts)
+          filter (FilterQuery. )
+          conf (.build (make-configuration authinfo))
           stream (doto (-> (TwitterStreamFactory. conf) .getInstance)
                    (.addListener (make-callback handler)))]
-      (TwitterStreamRunner. #(.sample stream))))
+      (when (:track opts)
+        (.track filter (into-array (clojure.string/split (:track opts) #"\s+"))))
+      (if (:track opts)
+        (TwitterStreamRunner. #(.filter stream filter))
+        (TwitterStreamRunner. #(.sample stream)))))
+
   StreamStorage
   (settings [_]
     {:query.default_field :text
