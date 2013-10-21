@@ -63,6 +63,13 @@ Now run `stream2es twitter --authorize --key CONSUMER_KEY --secret CONSUMER_SECR
 
 You should now be able to stream twitter with simply `stream2es twitter`.  stream2es will grab the most recent cached credentials from `~/.authinfo.stream2es`.
 
+## Using ES as a source
+
+If you use the `es` stream, you can copy indices from one Elasticsearch to another.  Example:
+
+        % stream2es es --source http://localhost:9200/wiki --index wiki2 --type page --mappings "$(curl -s localhost:9200/wiki/_mapping)"
+
+
 ## Options
 
         % stream2es --help
@@ -81,7 +88,6 @@ You can change index settings by supplying `--settings`:
                 "refresh_interval": "2m"
             }
         }'
-
 
 # Contributing
 
