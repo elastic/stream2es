@@ -3,6 +3,13 @@
             [clj-http.client :as http]
             [stream2es.log :as log]))
 
+(defn base-url [full]
+  (let [u (java.net.URL. full)]
+    (format "%s://%s:%s"
+            (.getProtocol u)
+            (.getHost u)
+            (.getPort u))))
+
 (defn index-url [url index]
   (format "%s/%s" url index))
 
@@ -35,3 +42,36 @@
                           obj)))
          (remove nil?)
          count)))
+
+(defn scroll* [url id ttl]
+  (let [resp (http/get
+              (format "%s/_search/scroll" url)
+              {:body id
+               :query-params {:scroll ttl}})]
+    (json/decode (:body resp) true)))
+
+(defn scroll [url id ttl]
+  (let [resp (scroll* url id ttl)
+        hits (-> resp :hits :hits)
+        new-id (:_scroll_id resp)]
+    (lazy-seq
+     (when (seq hits)
+       (cons (first hits) (concat (rest hits) (scroll url new-id ttl)))))))
+
+(defn scan1
+  "Set up scroll context."
+  [url query ttl size]
+  (let [resp (http/get
+              (format "%s/_search" url)
+              {:body query
+               :query-params
+               {:search_type "scan"
+                :scroll ttl
+                :size size}})]
+    (json/decode (:body resp) true)))
+
+(defn scan
+  "Client entry point."
+  [url query ttl size]
+  (let [resp (scan1 url query ttl size)]
+    (scroll (base-url url) (:_scroll_id resp) ttl)))
