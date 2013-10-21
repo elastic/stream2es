@@ -4,7 +4,8 @@
   (:require [stream2es.stream.wiki :as wiki]
             [stream2es.stream.stdin :as stdin]
             [stream2es.stream.twitter :as twitter]
-            [stream2es.stream.queue :as queue])
+            [stream2es.stream.queue :as queue]
+            [stream2es.stream.es])
   (:require [cheshire.core :as json]
             [clojure.tools.cli :refer [cli]]
             [stream2es.auth :as auth]
@@ -337,7 +338,7 @@
     (println)
     (println "Usage: stream2es [CMD] [OPTS]")
     (println)
-    (println "Available commands: wiki, twitter, stdin")
+    (println "Available commands: wiki, twitter, stdin, queue, es")
     (println)
     (println "Common opts:")
     (print (help/help opts))))
