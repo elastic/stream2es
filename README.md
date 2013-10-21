@@ -73,8 +73,7 @@ You should now be able to stream twitter with simply `stream2es twitter`.  strea
         ..........
 
 
-By default, the `refresh_interval` is `-1`, which lets ES refresh as
-it needs to.  You can change it by supplying custom `--settings`:
+You can change index settings by supplying `--settings`:
 
         % echo '{"name":"alfredo"}' | ./stream2es stdin --settings '
         {

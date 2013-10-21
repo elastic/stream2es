@@ -32,7 +32,7 @@
 (def index-settings
   {:index.number_of_shards 2
    :index.number_of_replicas 0
-   :index.refresh_interval -1})
+   :index.refresh_interval :5s})
 
 (def opts
   [["-d" "--max-docs" "Number of docs to index"
