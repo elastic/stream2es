@@ -67,7 +67,11 @@ You should now be able to stream twitter with simply `stream2es twitter`.  strea
 
 If you use the `es` stream, you can copy indices from one Elasticsearch to another.  Example:
 
-        % stream2es es --source http://localhost:9200/wiki --index wiki2 --type page --mappings "$(curl -s localhost:9200/wiki/_mapping)"
+        % stream2es es \
+             --source http://localhost:9200/wiki \
+             --index wiki2 \
+             --type page \
+             --mappings "$(curl -s localhost:9200/wiki/_mapping)"
 
 
 ## Options
