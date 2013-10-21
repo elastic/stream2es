@@ -64,7 +64,7 @@
               (System/getProperty "user.home")
               (java.io.File/separator)
               ".authinfo.stream2es")]
-   ["-u" "--es" "ES location" :default "http://localhost:9200"]
+   ["--target" "ES location" :default "http://localhost:9200"]
    ["-h" "--help" "Display help" :flag true :default false]])
 
 (defrecord BulkItem [meta source])
@@ -189,7 +189,7 @@
             (let [idxbulk (make-indexable-bulk bulk)
                   idxbulkbytes (count (.getBytes idxbulk))
                   bulk-bytes (reduce + (map #(get-in % [:source :bytes]) bulk))
-                  url (format "%s/%s" (:es @state) "_bulk")
+                  url (format "%s/%s" (:target @state) "_bulk")
                   errors (es/error-capturing-bulk url bulk make-indexable-bulk)]
               (dosync
                (alter state update-in [:total :indexed :docs] + (count bulk))
@@ -374,19 +374,19 @@
         (throw+ {:type ::badcmd}
                 "%s is not a valid command" cmd)))))
 
-(defn ensure-index [{:keys [stream es index type
+(defn ensure-index [{:keys [stream target index type
                             mappings settings replace]}]
   (when replace
     (log/info "delete index" index)
-    (es/delete es index))
-  (when-not (es/exists? es index)
+    (es/delete target index))
+  (when-not (es/exists? target index)
     (log/info "create index" index)
     (let [mappings (merge (stream/mappings stream type)
                           (json/decode mappings true))
           settings (merge index-settings
                           (stream/settings stream)
                           (json/decode settings true))]
-      (es/post es index (json/encode
+      (es/post target index (json/encode
                          {:settings settings
                           :mappings mappings})))))
 
@@ -397,8 +397,8 @@
         (ensure-index @state))
       (log/info
        (format "stream %s%s"
-               (:cmd @state) (if (:url @state)
-                               (format " from %s" (:url @state))
+               (:cmd @state) (if (:source @state)
+                               (format " from %s" (:source @state))
                                "")))
       (when (:tee @state)
         (log/info (format "saving bulks to %s" (:tee @state))))

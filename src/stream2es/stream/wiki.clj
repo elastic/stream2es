@@ -32,13 +32,13 @@
       :parse-fn #(Integer/parseInt %)]
      ["-i" "--index" "ES index" :default "wiki"]
      ["-t" "--type" "ES type" :default "page"]
-     ["-u" "--url" "Wiki dump locator" :default latest-wiki]
+     ["--source" "Wiki dump location" :default latest-wiki]
      ["--stream-buffer" "Buffer up to this many pages"
       :default 50
       :parse-fn #(Integer/parseInt %)]])
   Stream
-  (make-runner [this {:keys [url]} handler]
-    (let [stream (make-parser url handler)]
+  (make-runner [this opts handler]
+    (let [stream (make-parser (:source opts) handler)]
       (WikiStreamRunner. #(.parse stream))))
   StreamStorage
   (settings [_]

@@ -43,9 +43,9 @@ What is the output telling me?
                 0: Total docs that have had indexing errors so far
              1404: The _id of the first doc in the bulk
 
-If you're at a café or want to use a local copy of the dump, supply `--url`:
+If you're at a café or want to use a local copy of the dump, supply `--source`:
 
-        % ./stream2es wiki --max-docs 5 --url /d/data/enwiki-20121201-pages-articles.xml.bz2
+        % ./stream2es wiki --max-docs 5 --source /d/data/enwiki-20121201-pages-articles.xml.bz2
 
 ## Twitter Authentication
 
