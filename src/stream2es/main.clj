@@ -1,10 +1,10 @@
 (ns stream2es.main
   (:gen-class)
   ;; Need to require these because of the multimethod in s.stream.
-  (:require [stream2es.stream.wiki :as wiki]
-            [stream2es.stream.stdin :as stdin]
+  (:require [stream2es.stream.wiki]
+            [stream2es.stream.stdin]
             [stream2es.stream.twitter :as twitter]
-            [stream2es.stream.queue :as queue]
+            [stream2es.stream.queue]
             [stream2es.stream.es])
   (:require [cheshire.core :as json]
             [clojure.tools.cli :refer [cli]]
