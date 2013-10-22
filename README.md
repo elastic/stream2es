@@ -1,17 +1,18 @@
 # stream2es
 
-For when you need a little more control than
-[elasticsearch-river-wikipedia](https://github.com/elasticsearch/elasticsearch-river-wikipedia).
+Standalone utility to stream different inputs into Elasticsearch.
 
 ## Install
 
         % curl -O download.elasticsearch.org/stream2es/stream2es; chmod +x stream2es
 
-## Quick Start
+# Usage
+
+## stdin
 
 By default, `stream2es` reads JSON documents from stdin.
 
-        % echo '{"foo":1}' | stream2es
+        % echo '{"field":1}' | stream2es
         create index foo
         stream stdin
         flushing index queue
@@ -19,7 +20,9 @@ By default, `stream2es` reads JSON documents from stdin.
         streamed 1 docs 1 bytes xfer 70
         %
 
-You can also index the latest Wikipedia article dump.
+## Wikipedia
+
+Index the latest Wikipedia article dump.
 
         % stream2es wiki --index tmp            
         create index tmp
@@ -47,7 +50,19 @@ If you're at a café or want to use a local copy of the dump, supply `--source`:
 
         % ./stream2es wiki --max-docs 5 --source /d/data/enwiki-20121201-pages-articles.xml.bz2
 
-## Twitter Authentication
+## Elasticsearch
+
+If you use the `es` stream, you can copy indices from one Elasticsearch to another.  Example:
+
+        % stream2es es \
+             --source http://localhost:9200/wiki \
+             --index wiki2 \
+             --type page \
+             --mappings "$(curl -s localhost:9200/wiki/_mapping)"
+
+This is a convenient way to reindex data if you need to change the number of shards or update your mappings.
+
+## Twitter
 
 In order to stream Twitter, you have to create an app and authorize it.
 
@@ -63,18 +78,8 @@ Now run `stream2es twitter --authorize --key CONSUMER_KEY --secret CONSUMER_SECR
 
 You should now be able to stream twitter with simply `stream2es twitter`.  stream2es will grab the most recent cached credentials from `~/.authinfo.stream2es`.
 
-## Using ES as a source
 
-If you use the `es` stream, you can copy indices from one Elasticsearch to another.  Example:
-
-        % stream2es es \
-             --source http://localhost:9200/wiki \
-             --index wiki2 \
-             --type page \
-             --mappings "$(curl -s localhost:9200/wiki/_mapping)"
-
-
-## Options
+# Options
 
         % stream2es --help
         Copyright 2013 Elasticsearch
