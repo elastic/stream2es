@@ -43,14 +43,18 @@
          (remove nil?)
          count)))
 
-(defn scroll* [url id ttl]
+(defn scroll*
+  "One set of hits mid-scroll."
+  [url id ttl]
   (let [resp (http/get
               (format "%s/_search/scroll" url)
               {:body id
                :query-params {:scroll ttl}})]
     (json/decode (:body resp) true)))
 
-(defn scroll [url id ttl]
+(defn scroll
+  "lazy-seq of hits from on originating scroll_id."
+  [url id ttl]
   (let [resp (scroll* url id ttl)
         hits (-> resp :hits :hits)
         new-id (:_scroll_id resp)]
@@ -71,7 +75,7 @@
     (json/decode (:body resp) true)))
 
 (defn scan
-  "Client entry point."
+  "Client entry point. Returns a scrolling lazy-seq of hits."
   [url query ttl size]
   (let [resp (scan1 url query ttl size)]
     (scroll (base-url url) (:_scroll_id resp) ttl)))
