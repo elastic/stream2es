@@ -31,7 +31,7 @@
       :default 40
       :parse-fn #(Integer/parseInt %)]
      ["-i" "--index" "ES index" :default "wiki"]
-     ["-t" "--type" "ES type" :default "page"]
+     ["-t" "--type" "ES type -- gets overridden depending on the doc"]
      ["--source" "Wiki dump location" :default latest-wiki]
      ["--stream-buffer" "Buffer up to this many pages"
       :default 50
@@ -45,15 +45,19 @@
     {:number_of_shards 2
      :number_of_replicas 0
      :query.default_field :text})
-  (mappings [_ type]
-    {(keyword type)
-     {:_all {:enabled false}
-      :properties {}}}))
+  (mappings [_ _]
+    {:page {:_all {:enabled false} :properties {}}
+     :disambiguation {:_all {:enabled false} :properties {}}
+     :redirect {:_all {:enabled false} :properties {}}}))
 
 (extend-type WikiPage
   Streamable
   (make-source [page]
     {:_id (.getID page)
+     :_type (cond
+             (.isDisambiguationPage page) :disambiguation
+             (.isRedirect page) :redirect
+             :else :page)
      :title (-> page .getTitle str .trim)
      :text (-> (.getText page) .trim)
      :redirect (.isRedirect page)
