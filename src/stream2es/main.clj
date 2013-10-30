@@ -153,7 +153,9 @@
 (defn make-json-string [items]
   (let [replace-id (fn [item]
                      (merge (:source item)
-                            {:_id (-> item :meta :index :_id)}))]
+                            {:_id (-> item :meta :index :_id)}
+                            (when (-> item :meta :index :_type)
+                              {:_type (-> item :meta :index :_type)})))]
     (->> items
          (map replace-id)
          (map json/encode)
