@@ -55,10 +55,11 @@ If you're at a café or want to use a local copy of the dump, supply `--source`:
 If you use the `es` stream, you can copy indices from one Elasticsearch to another.  Example:
 
     % stream2es es \
-         --source http://localhost:9200/wiki \
+         --target http://bar.local:9200 \
+         --source http://foo.local:9200/wiki \
          --index wiki2 \
          --type page \
-         --mappings "$(curl -s localhost:9200/wiki/_mapping)"
+         --mappings "$(curl -s foo.local:9200/wiki/_mapping)"
 
 This is a convenient way to reindex data if you need to change the number of shards or update your mappings.
 
