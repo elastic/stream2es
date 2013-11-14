@@ -3,12 +3,21 @@
             [clj-http.client :as http]
             [stream2es.log :as log]))
 
+(defn components [url]
+  (let [u (java.net.URL. url)
+        [_ index type id] (re-find
+                           #"/*([^/]+)/?([^/]+)?/?([^/]+)?"
+                           (.getPath u))]
+    {:proto (.getProtocol u)
+     :host (.getHost u)
+     :port (.getPort u)
+     :index index
+     :type type
+     :id id}))
+
 (defn base-url [full]
-  (let [u (java.net.URL. full)]
-    (format "%s://%s:%s"
-            (.getProtocol u)
-            (.getHost u)
-            (.getPort u))))
+  (let [u (components full)]
+    (apply format "%s://%s:%s" ((juxt :proto :host :port) u))))
 
 (defn index-url [url index]
   (format "%s/%s" url index))
