@@ -13,7 +13,7 @@ Standalone utility to stream different inputs into Elasticsearch.
 By default, `stream2es` reads JSON documents from stdin.
 
     % echo '{"field":1}' | stream2es
-    create index foo
+    create index http://localhost:9200/foo
     stream stdin
     flushing index queue
     00:00.505 2.0d/s 0.1K/s 1 1 70

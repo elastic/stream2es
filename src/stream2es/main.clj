@@ -398,10 +398,12 @@
       (when (:indexing @state)
         (ensure-index @state))
       (log/info
-       (format "stream %s%s"
-               (:cmd @state) (if (:source @state)
-                               (format " from %s" (:source @state))
-                               "")))
+       (format "stream %s%sto %s"
+               (:cmd @state)
+               (if (:source @state)
+                 (format " from %s " (:source @state))
+                 " ")
+               (:target @state)))
       (when (:tee @state)
         (log/info (format "saving bulks to %s" (:tee @state))))
       (stream! state)
