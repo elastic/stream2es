@@ -2,6 +2,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as jio]
             [workroom.core :as work]
+            [stream2es.es :as es]
             [stream2es.util.io :as io]
             [stream2es.log :as log]
             [stream2es.stream :refer [new Stream
@@ -48,7 +49,7 @@
   (settings [_]
     {:number_of_shards 2
      :number_of_replicas 0})
-  (mapping [_ type]
-    {(keyword type)
+  (mapping [_ opts]
+    {(keyword (-> opts :target es/components :type))
      {:_all {:enabled false}
       :properties {}}}))

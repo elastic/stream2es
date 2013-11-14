@@ -30,8 +30,8 @@
      ["-q" "--queue-size" "Size of the internal bulk queue"
       :default 40
       :parse-fn #(Integer/parseInt %)]
-     ["-i" "--index" "ES index" :default "wiki"]
-     ["-t" "--type" "ES type -- gets overridden depending on the doc"]
+     ["--target" "Target ES http://host:port/index (we handle types here)"
+      :default "http://localhost:9200/wiki"]
      ["--source" "Wiki dump location" :default latest-wiki]
      ["--stream-buffer" "Buffer up to this many pages"
       :default 50
@@ -52,7 +52,7 @@
 
 (extend-type WikiPage
   Streamable
-  (make-source [page]
+  (make-source [page opts]
     {:_id (.getID page)
      :_type (cond
              (.isDisambiguationPage page) :disambiguation

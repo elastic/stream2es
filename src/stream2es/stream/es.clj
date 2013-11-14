@@ -27,9 +27,8 @@
      ["-q" "--queue-size" "Size of the internal bulk queue"
       :default 1000
       :parse-fn #(Integer/parseInt %)]
-     ["-i" "--index" "Target ES index"]
-     ["-t" "--type" "Target ES type"]
      ["--source" "Source ES url"]
+     ["--target" "Target ES url"]
      ["--query" "Query to _scan from source" :default match-all]
      ["--scroll-size" "Source scroll size"
       :default 500
@@ -41,11 +40,14 @@
   StreamStorage
   (settings [_]
     {:index.refresh_interval "5s"})
-  (mappings [_ type] {}))
+  (mapping [_ opts]
+    (if type
+      {type {:properties {}}}
+      (es/mapping (:source opts)))))
 
 (extend-type Document
   Streamable
-  (make-source [doc]
+  (make-source [doc opts]
     (:m doc)))
 
 (defmethod new 'es [cmd]
@@ -54,7 +56,8 @@
 (defn make-doc [hit]
   (->Document
    (merge (:_source hit)
-          {:_id (:_id hit)})))
+          {:_id (:_id hit)
+           :_type (:_type hit)})))
 
 (defn make-callback [opts handler]
   (fn []

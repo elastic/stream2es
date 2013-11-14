@@ -10,13 +10,13 @@
     "Command-line options specific to this stream impl."))
 
 (defprotocol Streamable
-  (make-source [obj]
+  (make-source [obj opts]
     "Make map of stream Java source object."))
 
 (defprotocol StreamStorage
   (settings [stream]
     "Index settings")
-  (mapping [stream type]
+  (mapping [stream opts]
     "Index mapping"))
 
 (defprotocol Stream

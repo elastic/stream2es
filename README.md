@@ -24,8 +24,8 @@ By default, `stream2es` reads JSON documents from stdin.
 
 Index the latest Wikipedia article dump.
 
-    % stream2es wiki --index tmp            
-    create index tmp
+    % stream2es wiki --target http://localhost:9200/tmp
+    create index http://localhost:9200/tmp
     stream wiki from http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-art
     icles.xml.bz2
     00:04.984 44.7d/s 622.7K/s 223 223 3177989 0 10
@@ -55,11 +55,8 @@ If you're at a café or want to use a local copy of the dump, supply `--source`:
 If you use the `es` stream, you can copy indices from one Elasticsearch to another.  Example:
 
     % stream2es es \
-         --target http://bar.local:9200 \
          --source http://foo.local:9200/wiki \
-         --index wiki2 \
-         --type page \
-         --mapping "$(curl -s foo.local:9200/wiki/_mapping)"
+         --target http://bar.local:9200/wiki2
 
 This is a convenient way to reindex data if you need to change the number of shards or update your mapping.
 

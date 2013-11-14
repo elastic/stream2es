@@ -1,6 +1,7 @@
 (ns stream2es.stream.twitter
   (:require [cheshire.core :as json]
             [stream2es.auth :as auth]
+            [stream2es.es :as es]
             [stream2es.stream :refer [new Stream Streamable
                                       StreamStorage CommandLine]]
             [stream2es.util.data :refer [maybe-update-in remove-in-if]]
@@ -10,6 +11,9 @@
            (twitter4j.json DataObjectFactory)))
 
 (declare make-configuration make-callback correct-polygon single-point?)
+
+(def default-type
+  :status)
 
 (def bulk-bytes (* 1024 100))
 
@@ -37,8 +41,8 @@
      ["-q" "--queue-size" "Size of the internal bulk queue"
       :default 1000
       :parse-fn #(Integer/parseInt %)]
-     ["-i" "--index" "ES index" :default "twitter"]
-     ["-t" "--type" "ES document type" :default "status"]
+     ["--target" "Target ES http://host:port/index/type"
+      :default "http://localhost:9200/twitter/status"]
      ["--authorize" "Create oauth credentials" :flag true :default false]
      ["--key" "Twitter app consumer key, only for --authorize"]
      ["--secret" "Twitter app consumer secret, only for --authorize"]
@@ -68,8 +72,9 @@
                 :output_unigrams true
                 :output_unigrams_if_no_shingles true
                 :token_separator " "}}}}})
-  (mapping [_ type]
-    {(keyword type)
+  (mapping [_ opts]
+    {(or (keyword (-> opts :target es/components :type))
+         default-type)
      {:_all {:enabled false}
       :_size {:enabled true
               :store "yes"}
@@ -126,11 +131,13 @@
 
 (extend-type Status
   Streamable
-  (make-source [status]
+  (make-source [status opts]
     (let [status* (json/decode (:json status) true)]
       (when (:id status*)
         (-> (dissoc status* :id)
             (assoc :_id (:id status*))
+            (assoc :_type (or (keyword (-> opts :target es/components :type))
+                              default-type))
             (remove-in-if [:place :bounding_box] nil?)
             (remove-in-if [:place :bounding_box] single-point?)
             (maybe-update-in [:place :bounding_box :coordinates]

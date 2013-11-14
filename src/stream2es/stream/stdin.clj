@@ -1,6 +1,7 @@
 (ns stream2es.stream.stdin
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
+            [stream2es.es :as es]
             [stream2es.stream :refer [new Stream
                                       Streamable CommandLine
                                       StreamStorage]]))
@@ -21,8 +22,8 @@
      ["-q" "--queue-size" "Size of the internal bulk queue"
       :default 40
       :parse-fn #(Integer/parseInt %)]
-     ["-i" "--index" "ES index" :default "foo"]
-     ["-t" "--type" "ES type" :default "t"]
+     ["--target" "Target ES http://host:port/index/type"
+      :default "http://localhost:9200/foo/t"]
      ["--stream-buffer" "Buffer up to this many docs"
       :default 100
       :parse-fn #(Integer/parseInt %)]])
@@ -40,12 +41,12 @@
   (settings [_]
     {:number_of_shards 2
      :number_of_replicas 0})
-  (mapping [_ type]
-    {(keyword type)
+  (mapping [_ opts]
+    {(keyword (-> opts :target es/components :type))
      {:_all {:enabled false}
       :properties {}}}))
 
 (extend-type String
   Streamable
-  (make-source [doc]
+  (make-source [doc opts]
     (json/decode doc true)))

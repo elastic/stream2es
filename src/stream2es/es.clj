@@ -19,22 +19,23 @@
   (let [u (components full)]
     (apply format "%s://%s:%s" ((juxt :proto :host :port) u))))
 
-(defn index-url [url index]
-  (format "%s/%s" url index))
+(defn index-url [url]
+  (let [{:keys [proto host port index]} (components url)]
+    (format "%s://%s:%s/%s" proto host port index)))
 
 (defn post
   ([url data]
      (log/trace "POSTing" (count (.getBytes data)) "bytes")
-     (http/post url {:body data}))
-  ([url index data]
-     (http/post (index-url url index) {:body data})))
+     (http/post url {:body data})))
 
-(defn delete [url index]
-  (http/delete (index-url url index) {:throw-exceptions false}))
+(defn delete [url]
+  (let [u (index-url url)]
+    (log/info "delete index" u)
+    (http/delete u {:throw-exceptions false})))
 
-(defn exists? [url index]
+(defn exists? [url]
   (try
-    (http/get (format "%s/_mapping" (index-url url index)))
+    (http/get (format "%s/_mapping" (index-url url)))
     (catch Exception _)))
 
 (defn error-capturing-bulk [url items serialize-bulk]
@@ -88,3 +89,13 @@
   [url query ttl size]
   (let [resp (scan1 url query ttl size)]
     (scroll (base-url url) (:_scroll_id resp) ttl)))
+
+(defn mapping [url]
+  (let [resp (-> (format "%s/_mapping" url)
+                 http/get
+                 :body
+                 (json/decode true))
+        index (:index (components url))]
+    (if index
+      (resp (keyword index))
+      resp)))
