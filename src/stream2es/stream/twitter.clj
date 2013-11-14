@@ -68,7 +68,7 @@
                 :output_unigrams true
                 :output_unigrams_if_no_shingles true
                 :token_separator " "}}}}})
-  (mappings [_ type]
+  (mapping [_ type]
     {(keyword type)
      {:_all {:enabled false}
       :_size {:enabled true

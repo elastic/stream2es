@@ -59,9 +59,9 @@ If you use the `es` stream, you can copy indices from one Elasticsearch to anoth
          --source http://foo.local:9200/wiki \
          --index wiki2 \
          --type page \
-         --mappings "$(curl -s foo.local:9200/wiki/_mapping)"
+         --mapping "$(curl -s foo.local:9200/wiki/_mapping)"
 
-This is a convenient way to reindex data if you need to change the number of shards or update your mappings.
+This is a convenient way to reindex data if you need to change the number of shards or update your mapping.
 
 ## Twitter
 

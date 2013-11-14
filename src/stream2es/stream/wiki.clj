@@ -45,7 +45,7 @@
     {:number_of_shards 2
      :number_of_replicas 0
      :query.default_field :text})
-  (mappings [_ _]
+  (mapping [_ _]
     {:page {:_all {:enabled false} :properties {}}
      :disambiguation {:_all {:enabled false} :properties {}}
      :redirect {:_all {:enabled false} :properties {}}}))

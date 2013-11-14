@@ -31,7 +31,7 @@
                                          false)]
       (testing "use defaults"
         (is (= {:settings (json/decode settings true)
-                :mappings {:thing
+                :mapping {:thing
                            {:_all {:enabled false}
                             :properties
                             {:location {:type "geo_point"}}}}}
@@ -46,12 +46,12 @@
 
       (testing "merge defaults"
         (reset! ops [])
-        (let [mappings (json/encode
+        (let [mapping (json/encode
                         {:thing
                          {:properties
                           {:location {:type "long"}}}})]
           (is (= {:settings stream2es.main/index-settings
-                  :mappings {:thing
+                  :mapping {:thing
                              {:properties
                               {:location {:type "long"}}}}}
                  (json/decode
@@ -61,5 +61,5 @@
                     :index "test"
                     :type "thing"
                     :settings settings
-                    :mappings mappings})
+                    :mapping mapping})
                   true))))))))

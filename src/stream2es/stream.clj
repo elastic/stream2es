@@ -16,8 +16,8 @@
 (defprotocol StreamStorage
   (settings [stream]
     "Index settings")
-  (mappings [stream type]
-    "Index mappings"))
+  (mapping [stream type]
+    "Index mapping"))
 
 (defprotocol Stream
   (make-runner [stream opts publisher]
