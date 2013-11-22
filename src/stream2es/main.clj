@@ -54,6 +54,8 @@
    ["-w" "--workers" "Number of indexing threads"
     :default indexing-threads
     :parse-fn #(Integer/parseInt %)]
+   ["--tag-progress"
+    "Add metadata to ES doc indicating stream offset/document size"]
    ["--tee" "Save bulk request payloads as files in path"]
    ["--mapping" "Index mapping" :default nil]
    ["--settings" "Index settings" :default nil]
@@ -82,17 +84,17 @@
        (shutdown-agents)
        (System/exit 0))))
 
-(defn source2item [_index _type offset source]
-  (let [bytes (-> source json/encode .getBytes count)]
-    (BulkItem.
-     {:index
-      (merge
-       {:_index _index
-        :_type (:_type source _type)}
-       (when (:_id source)
-         {:_id (str (:_id source))}))}
-     (merge (dissoc source :_id :_type)
-            {:bytes bytes
+(defn source2item [_index _type tag-progress offset source]
+  (BulkItem.
+   {:index
+    (merge
+     {:_index _index
+      :_type (:_type source _type)}
+     (when (:_id source)
+       {:_id (str (:_id source))}))}
+   (merge (dissoc source :_id :_type)
+          (when tag-progress
+            {:bytes (-> source json/encode .getBytes count)
              :offset offset}))))
 
 (defn flush-bulk [state]
@@ -269,13 +271,15 @@
          (let [item (source2item
                      (:index @state)
                      (:type @state)
+                     (:tag-progress @state)
                      (get-in @state [:total :streamed :docs])
-                     source)]
+                     source)
+               byte-count (-> source str .getBytes count)]
            (alter state update-in
-                  [:bytes] + (-> item :source :bytes))
+                  [:bytes] + byte-count)
            (alter state update-in
                   [:total :streamed :bytes]
-                  + (-> source str .getBytes count))
+                  + byte-count)
            (alter state update-in
                   [:items] conj item)))))))
 
