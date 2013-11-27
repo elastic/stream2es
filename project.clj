@@ -1,5 +1,6 @@
 (defproject org.elasticsearch/stream2es
-  (-> "etc/version.txt" slurp .trim)
+  (try (-> "etc/version.txt" slurp .trim)
+       (catch java.io.FileNotFoundException _ "0.0.1-SNAPSHOT"))
   :description "Index streams into ES."
   :url "http://github.com/elasticsearch/elasticsearch/stream2es"
   :license {:name "Apache 2"
