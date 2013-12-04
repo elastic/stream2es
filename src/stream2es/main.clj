@@ -90,8 +90,10 @@
        {:_index _index
         :_type (:_type source _type)}
        (when (:_id source)
-         {:_id (str (:_id source))}))}
-     (merge (dissoc source :_id :_type)
+         {:_id (str (:_id source))})
+       (when (:_routing source)
+         {:_routing (:_routing source)}))}
+     (merge (dissoc source :_id :_type :_routing)
             {:bytes bytes
              :offset offset}))))
 

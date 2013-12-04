@@ -81,7 +81,8 @@
                :query-params
                {:search_type "scan"
                 :scroll ttl
-                :size size}})]
+                :size size
+                :fields "_source,_routing"}})]
     (json/decode (:body resp) true)))
 
 (defn scan

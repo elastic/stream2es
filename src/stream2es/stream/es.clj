@@ -57,7 +57,9 @@
   (->Document
    (merge (:_source hit)
           {:_id (:_id hit)
-           :_type (:_type hit)})))
+           :_type (:_type hit)}
+          (when (get-in hit [:fields :_routing])
+            {:_routing (get-in hit [:fields :_routing])}))))
 
 (defn make-callback [opts handler]
   (fn []
