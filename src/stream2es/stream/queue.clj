@@ -34,6 +34,8 @@
      ["--exchange" "Broker exchange"]
      ["--queue" "Broker queue"]])
   Stream
+  (bootstrap [_ opts]
+    {})
   (make-runner [_ opts handler]
     (QueueStreamRunner.
      (fn []

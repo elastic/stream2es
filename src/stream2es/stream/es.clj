@@ -35,6 +35,8 @@
       :parse-fn #(Integer/parseInt %)]
      ["--scroll-time" "Source scroll context TTL" :default "15s"]])
   Stream
+  (bootstrap [_ opts]
+    {})
   (make-runner [this opts handler]
     (ElasticsearchStreamRunner. (make-callback opts handler)))
   StreamStorage

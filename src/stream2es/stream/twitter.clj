@@ -50,6 +50,8 @@
       :default 1000
       :parse-fn #(Integer/parseInt %)]])
   Stream
+  (bootstrap [_ opts]
+    {})
   (make-runner [this {:keys [authinfo]} handler]
     (let [conf (.build (make-configuration authinfo))
           stream (doto (-> (TwitterStreamFactory. conf) .getInstance)

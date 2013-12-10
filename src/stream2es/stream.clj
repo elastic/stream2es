@@ -22,4 +22,6 @@
 (defprotocol Stream
   (make-runner [stream opts publisher]
     "Make stream runner, wrapping up the handler that had to be
-    created from the state passed in earlier."))
+    created from the state passed in earlier.")
+  (bootstrap [stream opts]
+    "Modify the option map before we start the stream."))

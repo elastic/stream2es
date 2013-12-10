@@ -425,7 +425,9 @@
        (quit "*** Success! Credentials saved to %s" (:authinfo optmap)))
      (if (:version optmap)
        (quit (version))
-       (main (assoc optmap :stream stream :cmd cmd))))
+       (main (merge
+              (assoc optmap :stream stream :cmd cmd)
+              (stream/bootstrap optmap)))))
    (catch [:type :stream2es.auth/nocreds] _
      (quit (format "Error: %s" (:message &throw-context))))
    (catch [:type ::badcmd] _

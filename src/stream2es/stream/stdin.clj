@@ -28,6 +28,8 @@
       :default 100
       :parse-fn #(Integer/parseInt %)]])
   Stream
+  (bootstrap [_ opts]
+    {})
   (make-runner [_ opts handler]
     (StdinStreamRunner.
      (fn []

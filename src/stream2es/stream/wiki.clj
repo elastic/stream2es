@@ -37,6 +37,8 @@
       :default 50
       :parse-fn #(Integer/parseInt %)]])
   Stream
+  (bootstrap [_ opts]
+    {})
   (make-runner [this opts handler]
     (let [stream (make-parser (:source opts) handler)]
       (WikiStreamRunner. #(.parse stream))))
