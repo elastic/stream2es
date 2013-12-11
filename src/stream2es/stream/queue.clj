@@ -25,8 +25,7 @@
      ["-q" "--queue-size" "Size of the internal bulk queue"
       :default 40
       :parse-fn #(Integer/parseInt %)]
-     ["-i" "--index" "ES index" :default "foo"]
-     ["-t" "--type" "ES type" :default "t"]
+     ["--target" "ES index" :default "http://localhost:9200/foo/t"]
      ["--stream-buffer" "Buffer up to this many docs"
       :default 100
       :parse-fn #(Integer/parseInt %)]
@@ -35,11 +34,11 @@
      ["--queue" "Broker queue"]])
   Stream
   (bootstrap [_ opts]
-    {})
+    {:_exch (q/->Exchange (:broker opts) (:exchange opts))})
   (make-runner [_ opts handler]
     (QueueStreamRunner.
      (fn []
-       (let [q (q/->Queue (:broker opts) (:exchange opts) (:queue opts))]
+       (let [q (q/->Queue (:_exch opts) (:queue opts))]
          (log/log 'consume-poll (:broker opts) (:exchange opts) (:queue opts))
          (q/consume-poll q (fn [msg]
                              (doall

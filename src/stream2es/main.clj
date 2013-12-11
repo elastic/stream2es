@@ -427,7 +427,7 @@
        (quit (version))
        (main (merge
               (assoc optmap :stream stream :cmd cmd)
-              (stream/bootstrap optmap)))))
+              (stream/bootstrap stream optmap)))))
    (catch [:type :stream2es.auth/nocreds] _
      (quit (format "Error: %s" (:message &throw-context))))
    (catch [:type ::badcmd] _
