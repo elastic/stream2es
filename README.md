@@ -33,7 +33,7 @@ Index the latest Wikipedia article dump.
     00:09.715 63.0d/s 961.4K/s 612 209 3172256 0 1081
     00:12.000 73.2d/s 1036.1K/s 878 266 3167860 0 1404
     00:14.385 75.2d/s 1079.9K/s 1082 204 3174907 0 1756
-    ^Cstreamed 1158 docs 1082 bytes xfer 15906901 errors 0
+    streamed 1158 docs 1082 bytes xfer 15906901 errors 0
 
 What is the output telling me?
 
