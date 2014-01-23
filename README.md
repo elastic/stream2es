@@ -4,6 +4,10 @@ Standalone utility to stream different inputs into Elasticsearch.
 
 ## Install
 
+You'll need Java 7.  Run `java -version` to make sure.
+
+Then download `stream2es`:
+
     % curl -O download.elasticsearch.org/stream2es/stream2es; chmod +x stream2es
 
 # Usage
