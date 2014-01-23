@@ -176,9 +176,9 @@
   (auth/make-oauth-consumer
    (:key opts)
    (:secret opts)
-   "http://api.twitter.com/oauth/request_token"
-   "http://api.twitter.com/oauth/access_token"
-   "http://api.twitter.com/oauth/authorize"
+   "https://api.twitter.com/oauth/request_token"
+   "https://api.twitter.com/oauth/access_token"
+   "https://api.twitter.com/oauth/authorize"
    :hmac-sha1))
 
 (defn make-creds [opts]
