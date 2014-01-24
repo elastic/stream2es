@@ -44,9 +44,7 @@
       (WikiStreamRunner. #(.parse stream))))
   StreamStorage
   (settings [_]
-    {:number_of_shards 2
-     :number_of_replicas 0
-     :query.default_field :text})
+    {:query.default_field :text})
   (mapping [_ _]
     {:page {:_all {:enabled false} :properties {}}
      :disambiguation {:_all {:enabled false} :properties {}}
