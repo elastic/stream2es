@@ -23,15 +23,19 @@
   (let [{:keys [proto host port index]} (components url)]
     (format "%s://%s:%s/%s" proto host port index)))
 
+(defn put
+  ([url data]
+     (log/trace "PUT" (count (.getBytes data)) "bytes")
+     (http/put url {:body data})))
+
 (defn post
   ([url data]
-     (log/trace "POSTing" (count (.getBytes data)) "bytes")
+     (log/trace "POST" (count (.getBytes data)) "bytes")
      (http/post url {:body data})))
 
 (defn delete [url]
-  (let [u (index-url url)]
-    (log/info "delete index" u)
-    (http/delete u {:throw-exceptions false})))
+  (log/info "delete index" url)
+  (http/delete url {:throw-exceptions false}))
 
 (defn exists? [url]
   (try

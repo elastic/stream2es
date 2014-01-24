@@ -381,18 +381,19 @@
 
 (defn ensure-index [{:keys [stream target mapping settings replace]
                      :as opts}]
-  (when replace
-    (es/delete target))
-  (when-not (es/exists? target)
-    (log/info "create index" (es/index-url target))
-    (let [mapping (merge (stream/mapping stream opts)
-                         (json/decode mapping true))
-          settings (merge index-settings
-                          (stream/settings stream)
-                          (json/decode settings true))]
-      (es/post target (json/encode
-                       {:settings settings
-                        :mapping mapping})))))
+  (let [idx-url (es/index-url target)]
+    (when replace
+      (es/delete idx-url))
+    (when-not (es/exists? idx-url)
+      (log/info "create index" idx-url)
+      (let [mapping (merge (stream/mapping stream opts)
+                           (json/decode mapping true))
+            settings (merge index-settings
+                            (stream/settings stream)
+                            (json/decode settings true))]
+        (es/put idx-url (json/encode
+                         {:settings settings
+                          :mapping mapping}))))))
 
 (defn main [world]
   (let [state (start! world)]
