@@ -60,20 +60,19 @@
   StreamStorage
   (settings [_]
     {:query.default_field :text
-     :index {:analysis
-             {:analyzer
-              {:fulltext_analyzer
-               {:type :custom
-                :tokenizer :whitespace
-                :filter [:lowercase, :bigram]}}
-              :filter
-              {:bigram
-               {:type :shingle
-                :max_shingle_size 2
-                :min_shingle_size 2
-                :output_unigrams true
-                :output_unigrams_if_no_shingles true
-                :token_separator " "}}}}})
+     :index.analysis {:analyzer
+                      {:fulltext_analyzer
+                       {:type :custom
+                        :tokenizer :whitespace
+                        :filter [:lowercase, :bigram]}}
+                      :filter
+                      {:bigram
+                       {:type :shingle
+                        :max_shingle_size 2
+                        :min_shingle_size 2
+                        :output_unigrams true
+                        :output_unigrams_if_no_shingles true
+                        :token_separator " "}}}})
   (mapping [_ opts]
     {(or (keyword (-> opts :target es/components :type))
          default-type)
