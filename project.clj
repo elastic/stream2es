@@ -14,7 +14,7 @@
                  [slingshot "0.10.3"]
                  [clj-oauth "1.4.0"]
                  [org.tukaani/xz "1.3"]
-                 [org.elasticsearch/elastiqueue "0.99.0-SNAPSHOT"]]
+                 [org.elasticsearch/elastiqueue "0.99.1"]]
   :plugins [[lein-bin "0.3.2"]]
   :aot [stream2es.main]
   :main stream2es.main
