@@ -38,7 +38,7 @@
   (make-runner [_ opts handler]
     (QueueStreamRunner.
      (fn []
-       (let [q (q/->Queue (:_exch opts) (:queue opts))]
+       (let [q (q/declare-queue (:_exch opts) (:queue opts))]
          (log/log 'consume-poll (:broker opts) (:exchange opts) (:queue opts))
          (q/consume-poll q (fn [msg]
                              (doall
