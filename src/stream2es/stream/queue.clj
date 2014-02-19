@@ -34,11 +34,12 @@
      ["--queue" "Broker queue"]])
   Stream
   (bootstrap [_ opts]
-    {:_exch (q/->Exchange (:broker opts) (:exchange opts))})
+    {})
   (make-runner [_ opts handler]
     (QueueStreamRunner.
      (fn []
-       (let [q (q/declare-queue (:_exch opts) (:queue opts))]
+       (let [e (q/declare-exchange (:broker opts) (:exchange opts))
+             q (q/declare-queue e (:queue opts))]
          (log/log 'consume-poll (:broker opts) (:exchange opts) (:queue opts))
          (q/consume-poll q (fn [msg]
                              (doall
