@@ -42,11 +42,14 @@
              q (q/declare-queue e (:queue opts))]
          (log/log 'consume-poll (:broker opts) (:exchange opts) (:queue opts))
          (q/consume-poll q (fn [msg]
-                             (doall
-                              (map handler
-                                   (line-seq
-                                    (io/gz-reader
-                                     (-> msg :_source :source)))))))))))
+                             (if-let [src (-> msg :_source :source)]
+                               (doall
+                                (map handler
+                                     (line-seq
+                                      (io/gz-reader src))))
+                               (log/log 'consume-exception
+                                        "no source in msg"
+                                        msg))))))))
   StreamStorage
   (settings [_]
     {:number_of_shards 2
