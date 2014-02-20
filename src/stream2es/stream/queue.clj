@@ -43,10 +43,14 @@
          (log/log 'consume-poll (:broker opts) (:exchange opts) (:queue opts))
          (q/consume-poll q (fn [msg]
                              (if-let [src (-> msg :_source :source)]
-                               (doall
-                                (map handler
-                                     (line-seq
-                                      (io/gz-reader src))))
+                               (try
+                                 (doall
+                                     (map handler
+                                          (line-seq
+                                           (io/gz-reader src))))
+                                 (q/ack msg)
+                                 (catch Exception e
+                                   (log/log e)))
                                (log/log 'consume-exception
                                         "no source in msg"
                                         msg))))))))
