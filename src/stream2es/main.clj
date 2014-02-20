@@ -410,6 +410,8 @@
       (when (:tee @state)
         (log/info (format "saving bulks to %s" (:tee @state))))
       (stream! state)
+      (catch java.net.ConnectException e
+        (quit "%s connection refused" (:target @state)))
       (catch Exception e
         (.printStackTrace e)
         (quit "stream error: %s" (str e))))))
