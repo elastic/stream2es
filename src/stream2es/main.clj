@@ -54,7 +54,8 @@
    ["-w" "--workers" "Number of indexing threads"
     :default indexing-threads
     :parse-fn #(Integer/parseInt %)]
-   ["--tee" "Save bulk request payloads as files in path"]
+   ["--tee" "Save json request payloads as files in path"]
+   ["--tee-bulk" "Save bulk request payloads as files in path"]
    ["--mapping" "Index mapping" :default nil]
    ["--settings" "Index settings" :default nil]
    ["--replace" "Delete index before streaming" :flag true :default false]
@@ -189,11 +190,11 @@
   (let [bulk (.take q)]
     (when-not (= :stop bulk)
       (when (and (sequential? bulk) (pos? (count bulk)))
-        (let [first-id (-> bulk first :meta :index :_id)]
+        (let [first-id (-> bulk first :meta :index :_id)
+              idxbulk (make-indexable-bulk bulk)
+              idxbulkbytes (count (.getBytes idxbulk))]
           (when (:indexing @state)
-            (let [idxbulk (make-indexable-bulk bulk)
-                  idxbulkbytes (count (.getBytes idxbulk))
-                  bulk-bytes (reduce + (map #(get-in % [:source :bytes]) bulk))
+            (let [bulk-bytes (reduce + (map #(get-in % [:source :bytes]) bulk))
                   url (format "%s/%s" (:target @state) "_bulk")
                   errors (es/error-capturing-bulk url bulk make-indexable-bulk)]
               (dosync
@@ -206,6 +207,9 @@
             (log/debug "adding indexed total"
                        (get-in @state [:total :indexed :docs])
                        "+" (count bulk)))
+          (when (:tee-bulk @state)
+            (spit-mkdirs
+             (:tee-bulk @state) (str first-id ".bulk") idxbulk))
           (when (:tee @state)
             (let [data (make-json-string bulk)]
               (spit-mkdirs (:tee @state) (str first-id ".json") data)))))
@@ -268,11 +272,10 @@
     (let [source (stream/make-source stream-object @state)]
       (when source
         (dosync
-         (let [item (source2item
-                     (:index @state)
-                     (:type @state)
-                     (get-in @state [:total :streamed :docs])
-                     source)]
+         (let [{:keys [index type]} (es/components (:target @state))
+               item (source2item index type
+                                 (get-in @state [:total :streamed :docs])
+                                 source)]
            (alter state update-in
                   [:bytes] + (-> item :source :bytes))
            (alter state update-in
@@ -407,8 +410,10 @@
                  (format " from %s " (:source @state))
                  " ")
                (:target @state)))
+      (when (:tee-bulk @state)
+        (log/info (format "saving bulks to %s" (:tee-bulk @state))))
       (when (:tee @state)
-        (log/info (format "saving bulks to %s" (:tee @state))))
+        (log/info (format "saving json to %s" (:tee @state))))
       (stream! state)
       (catch java.net.ConnectException e
         (quit "%s connection refused" (:target @state)))
