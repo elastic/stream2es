@@ -44,11 +44,13 @@
          (q/consume-poll q (fn [msg]
                              (if-let [src (-> msg :_source :source)]
                                (try
+                                 (log/log 'start src)
                                  (doall
                                      (map handler
                                           (line-seq
                                            (io/gz-reader src))))
                                  (q/ack msg)
+                                 (log/log 'finish src)
                                  (catch Exception e
                                    (log/log e)))
                                (log/log 'consume-exception
