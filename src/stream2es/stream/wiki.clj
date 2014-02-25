@@ -45,7 +45,7 @@
   StreamStorage
   (settings [_]
     {:query.default_field :text})
-  (mapping [_ _]
+  (mappings [_ _]
     {:page {:_all {:enabled false} :properties {}}
      :disambiguation {:_all {:enabled false} :properties {}}
      :redirect {:_all {:enabled false} :properties {}}}))

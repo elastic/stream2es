@@ -42,7 +42,7 @@
   StreamStorage
   (settings [_]
     {:index.refresh_interval "5s"})
-  (mapping [_ opts]
+  (mappings [_ opts]
     (if type
       {type {:properties {}}}
       (es/mapping (:source opts)))))

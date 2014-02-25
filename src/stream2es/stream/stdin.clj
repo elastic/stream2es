@@ -43,7 +43,7 @@
   (settings [_]
     {:number_of_shards 2
      :number_of_replicas 0})
-  (mapping [_ opts]
+  (mappings [_ opts]
     {(keyword (-> opts :target es/components :type))
      {:_all {:enabled false}
       :properties {}}}))

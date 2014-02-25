@@ -16,7 +16,7 @@
 (defprotocol StreamStorage
   (settings [stream]
     "Index settings")
-  (mapping [stream opts]
+  (mappings [stream opts]
     "Index mapping"))
 
 (defprotocol Stream

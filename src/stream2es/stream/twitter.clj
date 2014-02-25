@@ -73,7 +73,7 @@
                         :output_unigrams true
                         :output_unigrams_if_no_shingles true
                         :token_separator " "}}}})
-  (mapping [_ opts]
+  (mappings [_ opts]
     {(or (keyword (-> opts :target es/components :type))
          default-type)
      {:_all {:enabled false}

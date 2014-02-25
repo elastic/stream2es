@@ -56,7 +56,7 @@
     :parse-fn #(Integer/parseInt %)]
    ["--tee" "Save json request payloads as files in path"]
    ["--tee-bulk" "Save bulk request payloads as files in path"]
-   ["--mapping" "Index mapping" :default nil]
+   ["--mappings" "Index mappings" :default nil]
    ["--settings" "Index settings" :default nil]
    ["--replace" "Delete index before streaming" :flag true :default false]
    ["--indexing" "Whether to actually send data to ES"
@@ -382,21 +382,21 @@
         (throw+ {:type ::badcmd}
                 "%s is not a valid command" cmd)))))
 
-(defn ensure-index [{:keys [stream target mapping settings replace]
+(defn ensure-index [{:keys [stream target mappings settings replace]
                      :as opts}]
   (let [idx-url (es/index-url target)]
     (when replace
       (es/delete idx-url))
     (when-not (es/exists? idx-url)
       (log/info "create index" idx-url)
-      (let [mapping (merge (stream/mapping stream opts)
-                           (json/decode mapping true))
+      (let [mappings (merge (stream/mappings stream opts)
+                            (json/decode mappings true))
             settings (merge index-settings
                             (stream/settings stream)
                             (json/decode settings true))]
         (es/put idx-url (json/encode
                          {:settings settings
-                          :mapping mapping}))))))
+                          :mappings mappings}))))))
 
 (defn main [world]
   (let [state (start! world)]
