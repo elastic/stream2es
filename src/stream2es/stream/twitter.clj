@@ -74,8 +74,7 @@
     {(or (keyword (-> opts :target es/components :type))
          default-type)
      {:_all {:enabled false}
-      :_size {:enabled true
-              :store "yes"}
+      :_size {:enabled true :store true}
       :dynamic_date_formats [weird-twitter-date-format
                              "date_time"
                              "date_optional_time"]

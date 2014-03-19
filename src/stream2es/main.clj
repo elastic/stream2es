@@ -84,19 +84,18 @@
        (System/exit 0))))
 
 (defn source2item [_index _type offset source]
-  (let [bytes (-> source json/encode .getBytes count)]
-    (BulkItem.
-     {:index
-      (merge
-       {:_index _index
-        :_type (:_type source _type)}
-       (when (:_id source)
-         {:_id (str (:_id source))})
-       (when (:_routing source)
-         {:_routing (:_routing source)}))}
-     (merge (dissoc source :_id :_type :_routing)
-            {:bytes bytes
-             :offset offset}))))
+  (BulkItem.
+   {:index
+    (merge
+     {:_index _index
+      :_type (:_type source _type)}
+     (when (:_id source)
+       {:_id (str (:_id source))})
+     (when (:_routing source)
+       {:_routing (:_routing source)}))
+    :_bytes (-> source json/encode .getBytes count)}
+   (merge (dissoc source :_id :_type :_routing)
+          {:offset offset})))
 
 (defn flush-bulk [state]
   (let [itemct (count (:items @state))
@@ -194,7 +193,7 @@
               idxbulk (make-indexable-bulk bulk)
               idxbulkbytes (count (.getBytes idxbulk))]
           (when (:indexing @state)
-            (let [bulk-bytes (reduce + (map #(get-in % [:source :bytes]) bulk))
+            (let [bulk-bytes (reduce + (map #(get-in % [:meta :_bytes]) bulk))
                   url (format "%s/%s" (:target @state) "_bulk")
                   errors (es/error-capturing-bulk url bulk make-indexable-bulk)]
               (dosync
@@ -277,7 +276,7 @@
                                  (get-in @state [:total :streamed :docs])
                                  source)]
            (alter state update-in
-                  [:bytes] + (-> item :source :bytes))
+                  [:bytes] + (-> item :meta :_bytes))
            (alter state update-in
                   [:total :streamed :bytes]
                   + (-> source str .getBytes count))

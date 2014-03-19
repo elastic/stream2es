@@ -46,8 +46,12 @@
   (settings [_]
     {:query.default_field :text})
   (mappings [_ _]
-    {:page {:_all {:enabled false} :properties {}}
-     :disambiguation {:_all {:enabled false} :properties {}}
+    {:page {:_all {:enabled false}
+            :_size {:enabled true :store true}
+            :properties {}}
+     :disambiguation {:_all {:enabled false}
+                      :_size {:enabled true :store true}
+                      :properties {}}
      :redirect {:_all {:enabled false} :properties {}}}))
 
 (extend-type WikiPage
