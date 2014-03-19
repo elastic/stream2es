@@ -34,6 +34,9 @@
    :index.number_of_replicas 0
    :index.refresh_interval :5s})
 
+(def offset-field
+  :_s2e_offset)
+
 (def opts
   [["-d" "--max-docs" "Number of docs to index"
     :default -1
@@ -61,6 +64,11 @@
    ["--replace" "Delete index before streaming" :flag true :default false]
    ["--indexing" "Whether to actually send data to ES"
     :flag true :default true]
+   ["--offset" (format
+                (str "Add %s field TO EACH DOCUMENT with "
+                     "the sequence offset of the stream")
+                (name offset-field))
+    :flag true :default false]
    ["--authinfo" "Stored stream credentials"
     :default (str
               (System/getProperty "user.home")
@@ -83,7 +91,7 @@
        (shutdown-agents)
        (System/exit 0))))
 
-(defn source2item [_index _type offset source]
+(defn source2item [_index _type offset store-offset? source]
   (BulkItem.
    {:index
     (merge
@@ -95,7 +103,8 @@
        {:_routing (:_routing source)}))
     :_bytes (-> source json/encode .getBytes count)}
    (merge (dissoc source :_id :_type :_routing)
-          {:offset offset})))
+          (when store-offset?
+            {offset-field offset}))))
 
 (defn flush-bulk [state]
   (let [itemct (count (:items @state))
@@ -274,6 +283,7 @@
          (let [{:keys [index type]} (es/components (:target @state))
                item (source2item index type
                                  (get-in @state [:total :streamed :docs])
+                                 (:offset @state)
                                  source)]
            (alter state update-in
                   [:bytes] + (-> item :meta :_bytes))
