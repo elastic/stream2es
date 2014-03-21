@@ -63,13 +63,12 @@ Now run `stream2es twitter --authorize --key CONSUMER_KEY --secret CONSUMER_SECR
 
 You should now be able to stream twitter with simply `stream2es twitter`.  stream2es will grab the most recent cached credentials from `~/.authinfo.stream2es`.
 
-### Filtered Stream
+### Tracking keywords
+
 By default, stream2es will stream random sample of all public tweets, however
 you can configure stream2es to _track_ specific keywords as follows:
 
-    	stream2es twitter --track "Linux,New York"
-
---track "Comma-separated list of phrases to determine what Tweets will be delivered on the stream."
+    	stream2es twitter --track "Linux%%New York%%March Madness"
 
 ## Options
 
