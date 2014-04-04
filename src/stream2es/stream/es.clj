@@ -43,9 +43,7 @@
   (settings [_]
     {:index.refresh_interval "5s"})
   (mappings [_ opts]
-    (if type
-      {type {:properties {}}}
-      (es/mapping (:source opts)))))
+    (es/mapping (:source opts))))
 
 (extend-type Document
   Streamable
