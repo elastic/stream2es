@@ -95,8 +95,7 @@
   (BulkItem.
    {:index
     (merge
-     {:_index _index
-      :_type (:_type source _type)}
+     {:_type (:_type source _type)}
      (when (:_id source)
        {:_id (str (:_id source))})
      (when (:_routing source)
