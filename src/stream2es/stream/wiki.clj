@@ -46,13 +46,8 @@
   (settings [_]
     {:query.default_field :text})
   (mappings [_ _]
-    {:page {:_all {:enabled false}
-            :_size {:enabled true :store true}
-            :properties {}}
-     :disambiguation {:_all {:enabled false}
-                      :_size {:enabled true :store true}
-                      :properties {}}
-     :redirect {:_all {:enabled false} :properties {}}}))
+    {:_default_ {:_all {:enabled false}
+                 :_size {:enabled true :store true}}}))
 
 (extend-type WikiPage
   Streamable
