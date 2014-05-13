@@ -96,7 +96,11 @@
        {:properties
         {:created_at {:type :date
                       :format weird-twitter-date-format
-                      :locale locale}}}
+                      :locale locale}
+         :text {:type :string
+                :index :not_analyzed}
+         :screen_name {:type :string
+                       :index :not_analyzed}}}
 
        :retweeted_status
        {:properties
