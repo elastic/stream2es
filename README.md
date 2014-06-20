@@ -108,7 +108,14 @@ You can change index settings by supplying `--settings`:
 
 # Contributing
 
-stream2es is written in Clojure.  You'll need leiningen 2.0+ to build.  You'll also need this little git alias: `ver = "!git log --pretty=format:'%ai %h' -1 | perl -pe 's,(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d) (\\d\\d):(\\d\\d):(\\d\\d) [^ ]+ ([a-z0-9]+),\\1\\2\\3\\7,'"`.
+stream2es is written in Clojure.  You'll need leiningen 2.0+ to build.
+
+You'll also need this little git alias.
+
+```
+[alias]
+ver = "!git log --pretty=format:'%ai %h' -1 | perl -pe 's,(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d) (\\d\\d):(\\d\\d):(\\d\\d) [^ ]+ ([a-z0-9]+),\\1\\2\\3\\7,'"
+```
 
     % lein bin
     % target/stream2es
