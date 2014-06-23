@@ -2,6 +2,10 @@
 
 Standalone utility to stream different inputs into Elasticsearch.
 
+## Read This First
+
+*If you're just wandering here, first check out [Logstash](http://github.com/elasticsearch/logstash).  It's a much more general tool, and one of our featured products.  If for some reason it doesn't do something that's important to you, create an issue there.  stream2es is mostly a quick hack to ingest a bit of data so you can get working with ES.  We will fix bugs as we have time.*
+
 ## Install
 
 You'll need Java 7.  Run `java -version` to make sure.
