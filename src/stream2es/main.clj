@@ -29,7 +29,7 @@
 
 (def indexing-threads 2)
 
-(def index-settings
+(def default-index-settings
   {:index.number_of_shards 2
    :index.number_of_replicas 0
    :index.refresh_interval :5s})
@@ -399,7 +399,7 @@
       (log/info "create index" idx-url)
       (let [mappings (merge (stream/mappings stream opts)
                             (json/decode mappings true))
-            settings (merge index-settings
+            settings (merge default-index-settings
                             (stream/settings stream)
                             (json/decode settings true))]
         (es/put idx-url (json/encode
