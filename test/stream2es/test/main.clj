@@ -2,20 +2,28 @@
   (:require [cheshire.core :as json]
             [clojure.test :refer :all]
             [stream2es.es]
-            [stream2es.stream])
+            [stream2es.stream]
+            [stream2es.auth :as auth]
+            [stream2es.stream.twitter :as twitter])
   (:require [stream2es.main] :reload))
+
+(defn noop [& args])
 
 (deftest help
   (with-redefs [stream2es.main/quit (fn [& args] (first args))
-                stream2es.main/main (fn [_])]
+                stream2es.main/main noop
+                auth/store-creds noop
+                twitter/make-creds noop]
     (testing "no args"
       (is (nil? (stream2es.main/-main))))
     (testing "good cmd"
       (is (nil? (stream2es.main/-main "stdin"))))
-    (testing "single --help"
-      (is (.startsWith (stream2es.main/-main "--help") "Error:")))
+    (testing "--help"
+      (is (= 0 (stream2es.main/-main "--help"))))
+    (testing "twitter --authorize"
+      (is (= 0 (stream2es.main/-main "twitter" "--authorize"))))
     (testing "badcmd"
-      (is (.contains (stream2es.main/-main "foo") "foo is not a")))))
+      (is (= 12 (stream2es.main/-main "foo"))))))
 
 (deftest index-settings
   (let [ops (atom [])

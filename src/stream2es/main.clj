@@ -80,16 +80,14 @@
 (defrecord BulkItem [meta source])
 
 (defn quit
-  ([]
-     (quit ""))
-  ([s]
-     (quit "%s" s))
-  ([fmt & s]
+  ([code s]
+     (quit code "%s" s))
+  ([code fmt & s]
      (when (pos? (count (first s)))
        (println (apply format fmt s)))
      (when quit?
        (shutdown-agents)
-       (System/exit 0))))
+       (System/exit code))))
 
 (defn source2item [_index _type offset store-offset? source]
   (BulkItem.
@@ -377,18 +375,17 @@
               streams
               (extenders stream/CommandLine))))))
 
-(defn get-stream [args]
+(defn maybe-get-stream [args]
   (let [cmd (if (seq args)
               (let [tok (first args)]
-                (when (.startsWith tok "-")
-                  (throw+ {:type ::badarg} ""))
+                (when (some (partial = tok) ["--help" "-help" "-h"])
+                  (throw+ {:type :help}))
                 (symbol tok))
               'stdin)]
     (try
       [cmd (stream/new cmd)]
       (catch IllegalArgumentException _
-        (throw+ {:type ::badcmd}
-                "%s is not a valid command" cmd)))))
+        (throw+ {:type ::badcmd} "%s is not a valid command" cmd)))))
 
 (defn ensure-index [{:keys [stream target mappings settings replace]
                      :as opts}]
@@ -424,35 +421,39 @@
         (log/info (format "saving json to %s" (:tee @state))))
       (stream! state)
       (catch java.net.ConnectException e
-        (quit "%s connection refused" (:target @state)))
-      (catch Exception e
-        (.printStackTrace e)
-        (quit "stream error: %s" (str e))))))
+        (throw+ {:type ::network} "%s connection refused" (:target @state))))))
 
 (defn -main [& args]
   (try+
-   (let [[cmd stream] (get-stream args)
+   (let [[cmd stream] (maybe-get-stream args)
          main-plus-cmd-specs (concat opts (stream/specs stream))
          [optmap args _] (parse-opts args main-plus-cmd-specs)]
      (when (:help optmap)
-       (quit (help stream)))
+       (throw+ {:type :help} (help stream)))
      (when (and (= cmd 'twitter) (:authorize optmap))
        (auth/store-creds (:authinfo optmap) (twitter/make-creds optmap))
-       (quit "*** Success! Credentials saved to %s" (:authinfo optmap)))
+       (throw+
+        {:type :authorized}
+        "*** Success! Credentials saved to %s" (:authinfo optmap)))
      (if (:version optmap)
-       (quit (version))
+       (throw+ {:type :version} (version))
        (main (merge
               (assoc optmap :stream stream :cmd cmd)
               (stream/bootstrap stream optmap)))))
+   (catch [:type :authorized] _
+     (quit 0 (:message &throw-context)))
+   (catch [:type :help] _
+     (quit 0 (:message &throw-context)))
    (catch [:type :stream2es.auth/nocreds] _
-     (quit (format "Error: %s" (:message &throw-context))))
+     (quit 11 (format "Error: %s" (:message &throw-context))))
    (catch [:type ::badcmd] _
-     (quit (format "Error: %s\n\n%s" (:message &throw-context) (help))))
+     (quit 12 (format "Error: %s\n\n%s" (:message &throw-context) (help))))
    (catch [:type ::badarg] _
-     (let [msg (format "Error: %s\n\n%s" (:message &throw-context) (help))]
-       (quit msg)))
+     (quit 13 (format "Error: %s\n\n%s" (:message &throw-context) (help))))
+   (catch [:type ::network] _
+     (quit 14 (format "Network error: %s" (:message &throw-context))))
    (catch Object _
+     (prn &throw-context)
      (let [t (:throwable &throw-context)]
        (.printStackTrace t)
-       (quit "unexpected exception: %s"
-             (str t))))))
+       (quit 99 "unexpected exception: %s" (str t))))))
