@@ -329,7 +329,7 @@
                (log/debug "waiting for indexers")
                (.await indexer-latch)
                (end)
-               (quit))]
+               (quit 0 "done"))]
     (.start (Thread. done "lifecycle"))
     (.addShutdownHook
      (Runtime/getRuntime) (Thread. end "SIGTERM handler"))
@@ -443,6 +443,8 @@
    (catch [:type :authorized] _
      (quit 0 (:message &throw-context)))
    (catch [:type :help] _
+     (quit 0 (:message &throw-context)))
+   (catch [:type ::done] _
      (quit 0 (:message &throw-context)))
    (catch [:type :stream2es.auth/nocreds] _
      (quit 11 (format "Error: %s" (:message &throw-context))))
