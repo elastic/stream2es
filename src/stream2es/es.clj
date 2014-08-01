@@ -86,7 +86,7 @@
                {:search_type "scan"
                 :scroll ttl
                 :size size
-                :fields "_source,_routing"}})]
+                :fields "_source,_routing,_parent"}})]
     (json/decode (:body resp) true)))
 
 (defn scan
