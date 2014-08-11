@@ -43,7 +43,7 @@
   (settings [_]
     {:index.refresh_interval "5s"})
   (mappings [_ opts]
-    (es/mapping (:source opts))))
+    (val (first (es/mapping (:source opts))))))
 
 (extend-type Document
   Streamable
