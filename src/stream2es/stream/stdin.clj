@@ -40,9 +40,9 @@
              (handler (.readLine *in*))
              (recur in)))))))
   StreamStorage
-  (settings [_]
-    {:number_of_shards 2
-     :number_of_replicas 0})
+  (settings [_ opts]
+    {:index.number_of_shards 2
+     :index.number_of_replicas 0})
   (mappings [_ opts]
     {(keyword (-> opts :target es/components :type))
      {:_all {:enabled false}

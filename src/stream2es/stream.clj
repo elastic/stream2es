@@ -14,7 +14,7 @@
     "Make map of stream Java source object."))
 
 (defprotocol StreamStorage
-  (settings [stream]
+  (settings [stream opts]
     "Index settings")
   (mappings [stream opts]
     "Index mapping"))

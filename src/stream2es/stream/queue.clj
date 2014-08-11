@@ -57,7 +57,7 @@
                                         "no source in msg"
                                         msg))))))))
   StreamStorage
-  (settings [_]
+  (settings [_ opts]
     {:number_of_shards 2
      :number_of_replicas 0})
   (mappings [_ opts]

@@ -47,10 +47,7 @@
                                          false)]
       (testing "use defaults"
         (is (= {:settings
-                {:number_of_replicas 0
-                 :number_of_shards 2
-                 :index.refresh_interval "5s"
-                 :index.number_of_shards 2
+                {:index.number_of_shards 2
                  :index.number_of_replicas 0}
                 :mappings {:thing
                            {:_all {:enabled false}

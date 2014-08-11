@@ -95,12 +95,18 @@
   (let [resp (scan1 url query ttl size)]
     (scroll (base-url url) (:_scroll_id resp) ttl)))
 
-(defn mapping [url]
-  (let [resp (-> (format "%s/_mapping" url)
+(defn idx-meta [url suffix]
+  (let [resp (-> (format "%s/%s" url suffix)
                  http/get
                  :body
                  (json/decode true))
         index (:index (components url))]
     (if index
-      (resp (keyword index))
+      (-> (resp (keyword index)) first val)
       resp)))
+
+(defn mapping [url]
+  (idx-meta url "_mapping"))
+
+(defn settings [url]
+  (idx-meta url "_settings"))

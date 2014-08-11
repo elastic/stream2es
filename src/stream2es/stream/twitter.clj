@@ -65,8 +65,11 @@
         (TwitterStreamRunner. #(.sample stream)))))
 
   StreamStorage
-  (settings [_]
-    {:query.default_field :text
+  (settings [_ opts]
+    {:index.number_of_shards 2
+     :index.number_of_replicas 0
+     :index.refresh_interval :5s
+     :query.default_field :text
      :index.analysis {:analyzer
                       {:fulltext_analyzer
                        {:type :custom

@@ -43,8 +43,11 @@
     (let [stream (make-parser (:source opts) handler)]
       (WikiStreamRunner. #(.parse stream))))
   StreamStorage
-  (settings [_]
-    {:query.default_field :text})
+  (settings [_ _]
+    {:index.number_of_shards 2
+     :index.number_of_replicas 0
+     :index.refresh_interval :5s
+     :query.default_field :text})
   (mappings [_ _]
     {:_default_ {:_all {:enabled false}
                  :_size {:enabled true :store true}}}))

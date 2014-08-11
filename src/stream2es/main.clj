@@ -29,11 +29,6 @@
 
 (def indexing-threads 2)
 
-(def default-index-settings
-  {:index.number_of_shards 2
-   :index.number_of_replicas 0
-   :index.refresh_interval :5s})
-
 (def offset-field
   :_s2e_offset)
 
@@ -83,8 +78,7 @@
   ([code s]
      (quit code "%s" s))
   ([code fmt & s]
-     (when (pos? (count (first s)))
-       (println (apply format fmt s)))
+     (log/info (apply format fmt s))
      (when quit?
        (shutdown-agents)
        (System/exit code))))
@@ -396,8 +390,7 @@
       (log/info "create index" idx-url)
       (let [mappings (merge (stream/mappings stream opts)
                             (json/decode mappings true))
-            settings (merge default-index-settings
-                            (stream/settings stream)
+            settings (merge (stream/settings stream opts)
                             (json/decode settings true))]
         (es/put idx-url (json/encode
                          {:settings settings

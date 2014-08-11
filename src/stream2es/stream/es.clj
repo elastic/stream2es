@@ -40,10 +40,10 @@
   (make-runner [this opts handler]
     (ElasticsearchStreamRunner. (make-callback opts handler)))
   StreamStorage
-  (settings [_]
-    {:index.refresh_interval "5s"})
+  (settings [_ opts]
+    (es/settings (:source opts)))
   (mappings [_ opts]
-    (val (first (es/mapping (:source opts))))))
+    (es/mapping (:source opts))))
 
 (extend-type Document
   Streamable
