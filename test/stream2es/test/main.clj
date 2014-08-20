@@ -20,6 +20,8 @@
       (is (nil? (stream2es.main/-main "stdin"))))
     (testing "--help"
       (is (= 0 (stream2es.main/-main "--help"))))
+    (testing "--version"
+      (is (= 0 (stream2es.main/-main "--version"))))
     (testing "twitter --authorize"
       (is (= 0 (stream2es.main/-main "twitter" "--authorize"))))
     (testing "badcmd"

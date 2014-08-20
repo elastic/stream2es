@@ -374,6 +374,8 @@
               (let [tok (first args)]
                 (when (some (partial = tok) ["--help" "-help" "-h"])
                   (throw+ {:type :help}))
+                (when (some (partial = tok) ["--version" "-version" "-v"])
+                  (throw+ {:type :version}))
                 (symbol tok))
               'stdin)]
     (try
@@ -428,15 +430,15 @@
        (throw+
         {:type :authorized}
         "*** Success! Credentials saved to %s" (:authinfo optmap)))
-     (if (:version optmap)
-       (throw+ {:type :version} (version))
-       (main (merge
-              (assoc optmap :stream stream :cmd cmd)
-              (stream/bootstrap stream optmap)))))
+     (main (merge
+            (assoc optmap :stream stream :cmd cmd)
+            (stream/bootstrap stream optmap))))
    (catch [:type :authorized] _
      (quit 0 (:message &throw-context)))
    (catch [:type :help] _
      (quit 0 (:message &throw-context)))
+   (catch [:type :version] _
+     (quit 0 (format "stream2es %s" (version))))
    (catch [:type ::done] _
      (quit 0 (:message &throw-context)))
    (catch [:type :stream2es.auth/nocreds] _
