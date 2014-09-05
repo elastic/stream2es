@@ -3,6 +3,7 @@
   ;; Need to require these because of the multimethod in s.stream.
   (:require [stream2es.stream.wiki]
             [stream2es.stream.stdin]
+            [stream2es.stream.generator]
             [stream2es.stream.twitter :as twitter]
             [stream2es.stream.queue]
             [stream2es.stream.es])
@@ -192,20 +193,21 @@
         (let [first-id (-> bulk first :meta :index :_id)
               idxbulk (make-indexable-bulk bulk)
               idxbulkbytes (count (.getBytes idxbulk))]
-          (when (:indexing @state)
-            (let [bulk-bytes (reduce + (map #(get-in % [:meta :_bytes]) bulk))
-                  url (format "%s/%s" (:target @state) "_bulk")
-                  errors (es/error-capturing-bulk url bulk make-indexable-bulk)]
-              (dosync
-               (alter state update-in [:total :indexed :docs] + (count bulk))
-               (alter state update-in [:total :indexed :bytes] + bulk-bytes)
-               (alter state update-in [:total :indexed :wire-bytes]
-                      + idxbulkbytes)
-               (alter state update-in [:total :errors] (fnil + 0) errors))
-              (index-status first-id (count bulk) idxbulkbytes state))
-            (log/debug "adding indexed total"
-                       (get-in @state [:total :indexed :docs])
-                       "+" (count bulk)))
+          (let [bulk-bytes (reduce + (map #(get-in % [:meta :_bytes]) bulk))
+                url (format "%s/%s" (:target @state) "_bulk")
+                errors (when (:indexing @state)
+                         (es/error-capturing-bulk url bulk
+                                                  make-indexable-bulk))]
+            (dosync
+             (alter state update-in [:total :indexed :docs] + (count bulk))
+             (alter state update-in [:total :indexed :bytes] + bulk-bytes)
+             (alter state update-in [:total :indexed :wire-bytes]
+                    + idxbulkbytes)
+             (alter state update-in [:total :errors] (fnil + 0) (or errors 0)))
+            (index-status first-id (count bulk) idxbulkbytes state))
+          (log/debug "adding indexed total"
+                     (get-in @state [:total :indexed :docs])
+                     "+" (count bulk))
           (when (:tee-bulk @state)
             (spit-mkdirs
              (:tee-bulk @state) (str first-id ".bulk") idxbulk))
