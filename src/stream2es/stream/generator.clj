@@ -42,17 +42,18 @@
 (extend-protocol FieldSpec
   String
   (parse [spec]
-    (let [[name type size] (split spec #":")
-          size (try (Integer/parseInt size) (catch Exception _ 0))]
-      (case type
-        "int" (IntField. name size)
-        "integer" (IntField. name size)
-        "str" (StringField. name size)
-        "string" (StringField. name size)
-        (StringField. name size)))))
+    (when (pos? (count (.trim spec)))
+      (let [[name type size] (split spec #":")
+            size (try (Integer/parseInt size) (catch Exception _ 0))]
+        (case type
+          "int" (IntField. name size)
+          "integer" (IntField. name size)
+          "str" (StringField. name size)
+          "string" (StringField. name size)
+          (StringField. name size))))))
 
 (defn parse-fields [template]
-  (map parse (split template #",")))
+  (filter identity (map parse (split template #","))))
 
 (defn make-doc-map [fields opts]
   (let [xs (map #(make % opts) fields)
@@ -78,7 +79,7 @@
       :parse-fn #(Integer/parseInt %)]
      ["--target" "ES index" :default "http://localhost:9200/foo/t"]
      ["--dictionary" "Dictionary location" :default nil]
-     ["--fields" "Field template" :default nil]
+     ["--fields" "Field template" :default ""]
      ["--stream-buffer" "Buffer up to this many docs"
       :default 100000
       :parse-fn #(Integer/parseInt %)]])
