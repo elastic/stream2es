@@ -9,7 +9,7 @@ package: target/$(BIN)
 install: target/$(BIN)
 	cp target/$(BIN) ~/bin/$(NAME)
 
-release: target/$(BIN)
+release: install target/$(BIN)
 	s3c es.download put -P target/$(BIN) $(S3HOME)/$(BIN)
 	s3c es.download cp $(S3HOME)/$(BIN) $(S3HOME)/$(NAME)
 
