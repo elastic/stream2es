@@ -28,6 +28,39 @@ By default, `stream2es` reads JSON documents from stdin.
     streamed 1 docs 1 bytes xfer 70
     %
 
+## Generator
+
+`stream2es` can fuzz data for you.  It can create blank documents, or documents with integer fields, or documents with string fields if you supply a dictionary.
+
+Blank documents are easy:
+
+```
+stream2es generator
+```
+
+Ints need to know how big you want them.  This template would give you a single field with values between `0` and `127`, inclusive.
+
+```
+stream2es generator --fields "f1:int:128"
+```
+
+To add a string, we need to add a template for it, and a file of newline-separated lines of text.  Given a field template of "NAME:str:N`stream2es` will select `N` number of words from each dictionary:
+
+```
+# zsh
+% stream2es generator --fields "f1:int:128,f2:str:2" --dictionary <(echo foo\\nbar\\nbaz)
+# any shell
+% cat <<EOF >/tmp/dict
+foo
+bar
+baz
+EOF
+% stream2es generator --fields "f1:int:128,f2:str:2" --dictionary /tmp/dict
+```
+
+Fortunately, most *nix systems come with `/usr/share/dict/words`, which is a great choice if you just need some English text.  You can control how many 
+
+
 ## Wikipedia
 
 Index the latest Wikipedia article dump.
