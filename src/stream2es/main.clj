@@ -402,14 +402,14 @@
   (let [state (start! world)]
     (try
       (when (:indexing @state)
-        (ensure-index @state))
-      (log/info
-       (format "stream %s%sto %s"
-               (:cmd @state)
-               (if (:source @state)
-                 (format " from %s " (:source @state))
-                 " ")
-               (:target @state)))
+        (ensure-index @state)
+        (log/info
+         (format "stream %s%sto %s"
+                 (:cmd @state)
+                 (if (:source @state)
+                   (format " from %s " (:source @state))
+                   " ")
+                 (:target @state))))
       (when (:tee-bulk @state)
         (log/info (format "saving bulks to %s" (:tee-bulk @state))))
       (when (:tee @state)
