@@ -44,7 +44,7 @@ Ints need to know how big you want them.  This template would give you a single 
 stream2es generator --fields "f1:int:128"
 ```
 
-To add a string, we need to add a template for it, and a file of newline-separated lines of text.  Given a field template of "NAME:str:N`stream2es` will select `N` number of words from each dictionary:
+To add a string, we need to add a template for it, and a file of newline-separated lines of text.  Given a field template of `NAME:str:N`, `stream2es` will select `N` number of words from each dictionary:
 
 ```
 # zsh
