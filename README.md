@@ -55,7 +55,34 @@ foo
 bar
 baz
 EOF
-% stream2es generator --fields "f1:int:128,f2:str:2" --dictionary /tmp/dict
+% stream2es generator --fields "f1:int:128,f2:str:2" --dictionary /tmp/dict --max-docs 5
+create index http://localhost:9200/foo
+stream generator to http://localhost:9200/foo/t
+flushing index queue
+00:00.279 17.9d/s 1.1K/s 5 5 305 0
+streamed 5 indexed 5 bytes xfer 305 errors 0
+done
+% curl localhost:9200/foo/_search\?format=yaml | fgrep -A2 _source
+    _source:
+      f1: 28
+      f2: "foo baz"
+--
+    _source:
+      f1: 88
+      f2: "baz foo"
+--
+    _source:
+      f1: 26
+      f2: "baz baz"
+--
+    _source:
+      f1: 68
+      f2: "bar baz"
+--
+    _source:
+      f1: 64
+      f2: "foo foo"
+%
 ```
 
 Fortunately, most *nix systems come with `/usr/share/dict/words`, which is a great choice if you just need some English text.  Linux distributions also have other packages you can install.
