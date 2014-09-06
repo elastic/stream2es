@@ -62,7 +62,7 @@ flushing index queue
 00:00.279 17.9d/s 1.1K/s 5 5 305 0
 streamed 5 indexed 5 bytes xfer 305 errors 0
 done
-% curl localhost:9200/foo/_search\?format=yaml | fgrep -A2 _source
+% curl -s localhost:9200/foo/_search\?format=yaml | fgrep -A2 _source
     _source:
       f1: 28
       f2: "foo baz"
