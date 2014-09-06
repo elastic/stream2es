@@ -85,7 +85,7 @@ done
 %
 ```
 
-Fortunately, most *nix systems come with `/usr/share/dict/words`, which is a great choice if you just need some English text.  Most OSes have other languages you can install.
+Fortunately, most *nix systems come with `/usr/share/dict/words` (Ubuntu package `wamerican-small`, for example), which is a great choice if you just need some (English) text.  Install other langs if you prefer.
 
 
 ## Wikipedia
