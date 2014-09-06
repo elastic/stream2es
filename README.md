@@ -58,7 +58,7 @@ EOF
 % stream2es generator --fields "f1:int:128,f2:str:2" --dictionary /tmp/dict
 ```
 
-Fortunately, most *nix systems come with `/usr/share/dict/words`, which is a great choice if you just need some English text.
+Fortunately, most *nix systems come with `/usr/share/dict/words`, which is a great choice if you just need some English text.  Linux distributions also have other packages you can install.
 
 
 ## Wikipedia
