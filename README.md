@@ -41,21 +41,21 @@ stream2es generator
 Ints need to know how big you want them.  This template would give you a single field with values between `0` and `127`, inclusive.
 
 ```
-stream2es generator --fields "f1:int:128"
+stream2es generator --fields f1:int:128
 ```
 
 To add a string, we need to add a template for it, and a file of newline-separated lines of text.  Given a field template of `NAME:str:N`, `stream2es` will select `N` random words from the dictionary for each field.
 
 ```
 # zsh
-% stream2es generator --fields "f1:int:128,f2:str:2" --dictionary <(echo foo\\nbar\\nbaz)
+% stream2es generator --fields f1:int:128,f2:str:2 --dictionary <(echo foo\\nbar\\nbaz)
 # any shell
 % cat <<EOF >/tmp/dict
 foo
 bar
 baz
 EOF
-% stream2es generator --fields "f1:int:128,f2:str:2" --dictionary /tmp/dict --max-docs 5
+% stream2es generator --fields f1:int:128,f2:str:2 --dictionary /tmp/dict --max-docs 5
 create index http://localhost:9200/foo
 stream generator to http://localhost:9200/foo/t
 flushing index queue
