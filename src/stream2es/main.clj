@@ -375,7 +375,8 @@
               (let [tok (first args)]
                 (when (some (partial = tok) ["help" "--help" "-help" "-h"])
                   (throw+ {:type :help}))
-                (when (some (partial = tok) ["--version" "-version" "-v"])
+                (when (some (partial = tok) ["version" "--version"
+                                             "-version" "-v"])
                   (throw+ {:type :version}))
                 (symbol tok))
               'stdin)]
