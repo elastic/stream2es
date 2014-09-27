@@ -29,7 +29,7 @@
 (def indexing-threads 2)
 
 (def offset-field
-  :_s2e_offset)
+  :__s2e_offset__)
 
 (def opts
   [["-d" "--max-docs" "Number of docs to index"
@@ -84,18 +84,19 @@
        (System/exit code))))
 
 (defn source2item [_index _type offset store-offset? source]
-  (BulkItem.
-   {:index
-    (merge
-     {:_type (:_type source _type)}
-     (when (:_id source)
-       {:_id (str (:_id source))})
-     (when (:_routing source)
-       {:_routing (:_routing source)}))
-    :_bytes (-> source json/encode .getBytes count)}
-   (merge (dissoc source :_id :_type :_routing)
-          (when store-offset?
-            {offset-field offset}))))
+  (let [s2e-meta (:__s2e_meta__ source)]
+    (BulkItem.
+     {:index
+      (merge
+       {:_type (:_type s2e-meta _type)}
+       (when (:_id s2e-meta)
+         {:_id (str (:_id s2e-meta))})
+       (when (:_routing s2e-meta)
+         {:_routing (:_routing s2e-meta)}))
+      :_bytes (-> source json/encode .getBytes count)}
+     (merge (dissoc source :__s2e_meta__)
+            (when store-offset?
+              {offset-field offset})))))
 
 (defn flush-bulk [state]
   (let [itemct (count (:items @state))

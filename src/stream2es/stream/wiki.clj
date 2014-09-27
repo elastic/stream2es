@@ -55,11 +55,11 @@
 (extend-type WikiPage
   Streamable
   (make-source [page opts]
-    {:_id (.getID page)
-     :_type (cond
-             (.isDisambiguationPage page) :disambiguation
-             (.isRedirect page) :redirect
-             :else :page)
+    {:__s2e_meta__ {:_id (.getID page)
+                    :_type (cond
+                            (.isDisambiguationPage page) :disambiguation
+                            (.isRedirect page) :redirect
+                            :else :page)}
      :title (-> page .getTitle str .trim)
      :text (-> (.getText page) .trim)
      :redirect (.isRedirect page)

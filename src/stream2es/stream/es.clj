@@ -57,12 +57,14 @@
 (defn make-doc [hit]
   (->Document
    (merge (:_source hit)
-          {:_id (:_id hit)
-           :_type (:_type hit)}
-          (when (get-in hit [:fields :_routing])
-            {:_routing (get-in hit [:fields :_routing])})
-          (when (get-in hit [:fields :_parent])
-            {:_parent (get-in hit [:fields :_parent])}))))
+          {:__s2e_meta__
+           (merge
+            {:_id (:_id hit)
+             :_type (:_type hit)}
+            (when (get-in hit [:fields :_routing])
+              {:_routing (get-in hit [:fields :_routing])})
+            (when (get-in hit [:fields :_parent])
+              {:_parent (get-in hit [:fields :_parent])}))})))
 
 (defn make-callback [opts handler]
   (fn []

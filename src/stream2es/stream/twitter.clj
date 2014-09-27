@@ -145,9 +145,10 @@
     (let [status* (json/decode (:json status) true)]
       (when (:id status*)
         (-> (dissoc status* :id)
-            (assoc :_id (:id status*))
-            (assoc :_type (or (keyword (-> opts :target es/components :type))
-                              default-type))
+            (assoc :__s2e_meta__
+              {:_id (:id status*)
+               :_type (or (keyword (-> opts :target es/components :type))
+                          default-type)})
             (remove-in-if [:place :bounding_box] nil?)
             (remove-in-if [:place :bounding_box] single-point?)
             (maybe-update-in [:place :bounding_box :coordinates]
