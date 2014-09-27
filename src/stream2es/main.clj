@@ -1,28 +1,26 @@
 (ns stream2es.main
   (:gen-class)
   ;; Need to require these because of the multimethod in s.stream.
-  (:require [stream2es.stream.wiki]
-            [stream2es.stream.stdin]
+  (:require [stream2es.stream :as stream]
+            [stream2es.stream.es]
             [stream2es.stream.generator]
-            [stream2es.stream.twitter :as twitter]
             [stream2es.stream.queue]
-            [stream2es.stream.es])
+            [stream2es.stream.stdin]
+            [stream2es.stream.twitter :as twitter]
+            [stream2es.stream.wiki])
   (:require [cheshire.core :as json]
             [clojure.tools.cli :refer [cli]]
+            [slingshot.slingshot :refer [try+ throw+]]
             [stream2es.auth :as auth]
-            [stream2es.log :as log]
             [stream2es.es :as es]
-            [stream2es.size :refer [size-of]]
-            [stream2es.version :refer [version]]
-            [stream2es.stream :as stream]
             [stream2es.help :as help]
+            [stream2es.log :as log]
+            [stream2es.size :refer [size-of]]
             [stream2es.util.io :as io]
             [stream2es.util.string :as s]
             [stream2es.util.time :as time]
-            [slingshot.slingshot :refer [try+ throw+]])
-  (:import (clojure.lang ExceptionInfo)
-           (java.io FileNotFoundException)
-           (java.util.concurrent CountDownLatch
+            [stream2es.version :refer [version]])
+  (:import (java.util.concurrent CountDownLatch
                                  LinkedBlockingQueue
                                  TimeUnit)))
 
