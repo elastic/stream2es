@@ -426,7 +426,7 @@
          main-plus-cmd-specs (concat opts (stream/specs stream))
          [optmap args _] (parse-opts args main-plus-cmd-specs)]
      (when (:help optmap)
-       (throw+ {:type :help} (help stream)))
+       (throw+ {:type :help :msg (help stream)}))
      (when (and (= cmd 'twitter) (:authorize optmap))
        (auth/store-creds (:authinfo optmap) (twitter/make-creds optmap))
        (throw+
@@ -437,11 +437,8 @@
             (stream/bootstrap stream optmap))))
    (catch [:type :authorized] _
      (quit 0 (:message &throw-context)))
-   (catch [:type :help] _
-     (let [m (:message &throw-context)]
-       (if (re-find #"^throw\+:" m)
-         (quit 0 (help))
-         (quit 0 m))))
+   (catch [:type :help] {:keys [msg]}
+     (quit 0 (or msg (help))))
    (catch [:type :version] _
      (quit 0 (format "stream2es %s" (version))))
    (catch [:type ::done] _
