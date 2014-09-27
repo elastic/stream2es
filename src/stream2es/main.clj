@@ -92,7 +92,9 @@
        (when (:_id s2e-meta)
          {:_id (str (:_id s2e-meta))})
        (when (:_routing s2e-meta)
-         {:_routing (:_routing s2e-meta)}))
+         {:_routing (:_routing s2e-meta)})
+       (when (:_parent s2e-meta)
+         {:_parent (:_parent s2e-meta)}))
       :_bytes (-> source json/encode .getBytes count)}
      (merge (dissoc source :__s2e_meta__)
             (when store-offset?
