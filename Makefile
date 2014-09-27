@@ -14,7 +14,7 @@ release: install target/$(BIN)
 	s3c es.download cp $(S3HOME)/$(BIN) $(S3HOME)/$(NAME)
 
 clean:
-	$(LEIN) clean
+	rm -rf target
 
 target/$(BIN):
 	mkdir -p etc
