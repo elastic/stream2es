@@ -81,6 +81,7 @@
   ([code fmt & s]
      (log/info (apply format fmt s))
      (when quit?
+       (log/flush)
        (shutdown-agents)
        (System/exit code))))
 
@@ -374,7 +375,7 @@
 (defn maybe-get-stream [args]
   (let [cmd (if (seq args)
               (let [tok (first args)]
-                (when (some (partial = tok) ["--help" "-help" "-h"])
+                (when (some (partial = tok) ["help" "--help" "-help" "-h"])
                   (throw+ {:type :help}))
                 (when (some (partial = tok) ["--version" "-version" "-v"])
                   (throw+ {:type :version}))
@@ -438,7 +439,10 @@
    (catch [:type :authorized] _
      (quit 0 (:message &throw-context)))
    (catch [:type :help] _
-     (quit 0 (:message &throw-context)))
+     (let [m (:message &throw-context)]
+       (if (re-find #"^throw\+:" m)
+         (quit 0 (help))
+         (quit 0 m))))
    (catch [:type :version] _
      (quit 0 (format "stream2es %s" (version))))
    (catch [:type ::done] _

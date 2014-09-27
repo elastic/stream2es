@@ -1,4 +1,5 @@
 (ns stream2es.log
+  (:refer-clojure :exclude [flush])
   (:import (java.util.concurrent Executors)))
 
 (def svc (Executors/newFixedThreadPool 1))
@@ -30,3 +31,8 @@
 
 (defmacro info [& msg]
   `(apply log ~(vec msg)))
+
+(defn flush []
+  (dotimes [_ 3]
+    (clojure.core/flush)
+    (Thread/sleep (rand-int 100))))
