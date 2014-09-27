@@ -1,6 +1,7 @@
 (ns stream2es.es
   (:require [cheshire.core :as json]
             [clj-http.client :as http]
+            [slingshot.slingshot :refer [try+ throw+]]
             [stream2es.log :as log]))
 
 (defn components [url]
@@ -60,11 +61,17 @@
 (defn scroll*
   "One set of hits mid-scroll."
   [url id ttl]
-  (let [resp (http/get
-              (format "%s/_search/scroll" url)
-              {:body id
-               :query-params {:scroll ttl}})]
-    (json/decode (:body resp) true)))
+  (try+
+   (let [resp (http/get
+               (format "%s/_search/scroll" url)
+               {:body id
+                :query-params {:scroll ttl}})]
+     (json/decode (:body resp) true))
+   (catch Object {:keys [body]}
+     (cond
+      (re-find #"SearchContextMissingException" body)
+      (throw+ {:type ::search-context-missing})
+      :else (throw+ {:type ::wat})))))
 
 (defn scroll
   "lazy-seq of hits from on originating scroll_id."

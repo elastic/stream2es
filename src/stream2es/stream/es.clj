@@ -1,10 +1,11 @@
 (ns stream2es.stream.es
   (:require [cheshire.core :as json]
+            [slingshot.slingshot :refer [try+ throw+]]
             [stream2es.es :as es]
             [stream2es.stream :refer [new Stream Streamable
                                       StreamStorage CommandLine]]))
 
-(declare make-callback)
+(declare make-callback search-context-missing-explanation)
 
 (def match-all
   "{\"query\":{\"match_all\":{}}}")
@@ -33,7 +34,7 @@
      ["--scroll-size" "Source scroll size"
       :default 500
       :parse-fn #(Integer/parseInt %)]
-     ["--scroll-time" "Source scroll context TTL" :default "15s"]])
+     ["--scroll-time" "Source scroll context TTL" :default "60s"]])
   Stream
   (bootstrap [_ opts]
     {})
@@ -65,9 +66,24 @@
 
 (defn make-callback [opts handler]
   (fn []
-    (doseq [hit (es/scan (:source opts)
-                         (:query opts)
-                         (:scroll-time opts)
-                         (:scroll-size opts))]
-      (-> hit make-doc handler))
-    (handler :eof)))
+    (try+
+     (doseq [hit (es/scan (:source opts)
+                          (:query opts)
+                          (:scroll-time opts)
+                          (:scroll-size opts))]
+       (-> hit make-doc handler))
+     (handler :eof)
+     (catch [:type :stream2es.es/search-context-missing] _
+       (throw+ {:type :stream-death
+                :msg search-context-missing-explanation})))))
+
+(def search-context-missing-explanation
+  "
+
+The search scroll is closing before stream2es is able to return and
+get another batch of hits. This typically means that ES is under
+pressure on one side or the other.
+
+Try either increasing --scroll-time or decreasing --scroll-size.
+
+")

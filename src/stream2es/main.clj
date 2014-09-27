@@ -455,8 +455,9 @@
      (quit 13 (format "Error: %s\n\n%s" (:message &throw-context) (help))))
    (catch [:type ::network] _
      (quit 14 (format "Network error: %s" (:message &throw-context))))
+   (catch [:type :stream-death] {:keys [msg]}
+     (quit 15 (format "stream terminated: %s" msg)))
    (catch Object _
-     (prn &throw-context)
      (let [t (:throwable &throw-context)]
        (.printStackTrace t)
        (quit 99 "unexpected exception: %s" (str t))))))
