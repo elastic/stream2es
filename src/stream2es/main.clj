@@ -1,21 +1,15 @@
 (ns stream2es.main
   (:gen-class)
   ;; Need to require these because of the multimethod in s.stream.
-  (:require [stream2es.stream :as stream]
-            [stream2es.stream.es]
-            [stream2es.stream.generator]
-            [stream2es.stream.queue]
-            [stream2es.stream.stdin]
-            [stream2es.stream.twitter :as twitter]
-            [stream2es.stream.wiki])
   (:require [cheshire.core :as json]
             [clojure.tools.cli :refer [cli]]
             [slingshot.slingshot :refer [try+ throw+]]
-            [stream2es.auth :as auth]
+            [stream2es.bootstrap :refer [boot help]]
             [stream2es.es :as es]
-            [stream2es.help :as help]
             [stream2es.log :as log]
+            [stream2es.opts :as opts]
             [stream2es.size :refer [size-of]]
+            [stream2es.stream :as stream]
             [stream2es.util.io :as io]
             [stream2es.util.string :as s]
             [stream2es.util.time :as time]
@@ -25,51 +19,6 @@
                                  TimeUnit)))
 
 (def quit? true)
-
-(def indexing-threads 2)
-
-(def offset-field
-  :__s2e_offset__)
-
-(def opts
-  [["-d" "--max-docs" "Number of docs to index"
-    :default -1
-    :parse-fn #(Integer/parseInt %)]
-   ["-q" "--queue-size" "Size of the internal bulk queue"
-    :default 40
-    :parse-fn #(Integer/parseInt %)]
-   ["--stream-buffer" "Buffer up to this many pages"
-    :default 50
-    :parse-fn #(Integer/parseInt %)]
-   ["--stream-timeout" "Wait seconds for data on the stream"
-    :default -1
-    :parse-fn #(Integer/parseInt %)]
-   ["-s" "--skip" "Skip this many docs before indexing"
-    :default 0
-    :parse-fn #(Integer/parseInt %)]
-   ["-v" "--version" "Print version" :flag true :default false]
-   ["-w" "--workers" "Number of indexing threads"
-    :default indexing-threads
-    :parse-fn #(Integer/parseInt %)]
-   ["--tee" "Save json request payloads as files in path"]
-   ["--tee-bulk" "Save bulk request payloads as files in path"]
-   ["--mappings" "Index mappings" :default nil]
-   ["--settings" "Index settings" :default nil]
-   ["--replace" "Delete index before streaming" :flag true :default false]
-   ["--indexing" "Whether to actually send data to ES"
-    :flag true :default true]
-   ["--offset" (format
-                (str "Add %s field TO EACH DOCUMENT with "
-                     "the sequence offset of the stream")
-                (name offset-field))
-    :flag true :default false]
-   ["--authinfo" "Stored stream credentials"
-    :default (str
-              (System/getProperty "user.home")
-              (java.io.File/separator)
-              ".authinfo.stream2es")]
-   ["--target" "ES location" :default "http://localhost:9200"]
-   ["-h" "--help" "Display help" :flag true :default false]])
 
 (defrecord BulkItem [meta source])
 
@@ -98,7 +47,7 @@
       :_bytes (-> source json/encode .getBytes count)}
      (merge (dissoc source :__s2e_meta__)
             (when store-offset?
-              {offset-field offset})))))
+              {opts/offset-field offset})))))
 
 (defn flush-bulk [state]
   (let [itemct (count (:items @state))
@@ -337,57 +286,6 @@
      (alter state assoc :indexer indexer))
     state))
 
-(defn parse-opts [args specs]
-  (try
-    (apply cli args specs)
-    (catch Exception e
-      (throw+ {:type ::badarg} (.getMessage e)))))
-
-(defn help-preamble []
-  (with-out-str
-    (println "Copyright 2013 Elasticsearch")
-    (println)
-    (println "Usage: stream2es [CMD] [OPTS]")
-    (println)
-    (println "Available commands: wiki, twitter, stdin, queue, es")
-    (println)
-    (println "Common opts:")
-    (print (help/help opts))))
-
-(defn help-stream [& streams]
-  (with-out-str
-    (doseq [stream streams :let [inst (if (satisfies? stream/CommandLine stream)
-                                        stream
-                                        (.newInstance stream))]]
-      (println)
-      (println (format "%s opts:"
-                       (second (re-find #"\.([^.]+)@0$" (str inst)))))
-      (print (help/help (stream/specs inst))))))
-
-(defn help [& streams]
-  (with-out-str
-    (print (help-preamble))
-    (print
-     (apply help-stream
-            (if (seq streams)
-              streams
-              (extenders stream/CommandLine))))))
-
-(defn maybe-get-stream [args]
-  (let [cmd (if (seq args)
-              (let [tok (first args)]
-                (when (some (partial = tok) ["help" "--help" "-help" "-h"])
-                  (throw+ {:type :help}))
-                (when (some (partial = tok) ["version" "--version"
-                                             "-version" "-v"])
-                  (throw+ {:type :version}))
-                (symbol tok))
-              'stdin)]
-    (try
-      [cmd (stream/new cmd)]
-      (catch IllegalArgumentException _
-        (throw+ {:type ::badcmd} "%s is not a valid command" cmd)))))
-
 (defn ensure-index [{:keys [stream target mappings settings replace]
                      :as opts}]
   (let [idx-url (es/index-url target)]
@@ -425,19 +323,7 @@
 
 (defn -main [& args]
   (try+
-   (let [[cmd stream] (maybe-get-stream args)
-         main-plus-cmd-specs (concat opts (stream/specs stream))
-         [optmap args _] (parse-opts args main-plus-cmd-specs)]
-     (when (:help optmap)
-       (throw+ {:type :help :msg (help stream)}))
-     (when (and (= cmd 'twitter) (:authorize optmap))
-       (auth/store-creds (:authinfo optmap) (twitter/make-creds optmap))
-       (throw+
-        {:type :authorized}
-        "*** Success! Credentials saved to %s" (:authinfo optmap)))
-     (main (merge
-            (assoc optmap :stream stream :cmd cmd)
-            (stream/bootstrap stream optmap))))
+   (main (boot args))
    (catch [:type :authorized] _
      (quit 0 (:message &throw-context)))
    (catch [:type :help] {:keys [msg]}
@@ -448,10 +334,10 @@
      (quit 0 (:message &throw-context)))
    (catch [:type :stream2es.auth/nocreds] _
      (quit 11 (format "Error: %s" (:message &throw-context))))
-   (catch [:type ::badcmd] _
-     (quit 12 (format "Error: %s\n\n%s" (:message &throw-context) (help))))
-   (catch [:type ::badarg] _
-     (quit 13 (format "Error: %s\n\n%s" (:message &throw-context) (help))))
+   (catch [:type :stream2es.bootstrap/badcmd] _
+     (quit 12 (format "badcmd: %s\n\n%s" (:message &throw-context) (help))))
+   (catch [:type :stream2es.opts/badarg] _
+     (quit 13 (format "badarg: %s\n\n%s" (:message &throw-context) (help))))
    (catch [:type ::network] _
      (quit 14 (format "Network error: %s" (:message &throw-context))))
    (catch [:type :stream-death] {:keys [msg]}
