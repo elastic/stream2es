@@ -48,14 +48,13 @@ To add a string, we need to add a template for it, and a file of newline-separat
 
 ```
 # zsh
-% stream2es generator --fields f1:int:128,f2:str:2 --dictionary <(echo foo\\nbar\\nbaz)
-# any shell
-% cat <<EOF >/tmp/dict
+% stream2es generator --fields f1:int:128,f2:str:2 --dictionary <(/bin/echo -e "foo\nbar\nbaz")
+#### same as:
+% stream2es generator --fields f1:int:128,f2:str:2 --dictionary /dev/stdin --max-docs 5 <<EOF
 foo
 bar
 baz
 EOF
-% stream2es generator --fields f1:int:128,f2:str:2 --dictionary /tmp/dict --max-docs 5
 create index http://localhost:9200/foo
 stream generator to http://localhost:9200/foo/t
 flushing index queue
