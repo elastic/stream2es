@@ -20,13 +20,44 @@ Then download `stream2es`:
 
 By default, `stream2es` reads JSON documents from stdin.
 
-    % echo '{"field":1}' | stream2es
-    create index http://localhost:9200/foo
-    stream stdin
-    flushing index queue
-    00:00.505 2.0d/s 0.1K/s 1 1 70
-    streamed 1 docs 1 bytes xfer 70
-    %
+```
+% echo '{"field":1}' | stream2es
+create index http://localhost:9200/foo
+stream stdin to http://localhost:9200/foo/t
+flushing index queue
+00:00.346 2.9d/s 0.1K/s 1 1 48 0
+streamed 1 indexed 1 bytes xfer 48 errors 0
+done
+%
+```
+
+What is the output telling me?
+
+    00:00.346: MM:SS that the app has been running
+       2.9d/s: Docs per second indexed
+       0.1K/s: Bytes per second indexed (bulk transferred over the wire)
+            1: Total docs indexed so far
+            1: Docs in bulk
+           48: Total JSON bytes of docs in the bulk
+            0: Total docs that have had indexing errors so far
+
+## Wikipedia
+
+Index the latest Wikipedia article dump.
+
+    % stream2es wiki --target http://localhost:9200/tmp
+    create index http://localhost:9200/tmp
+    stream wiki from http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
+    00:04.984 44.7d/s 622.7K/s 223 223 3177989 0 10
+    00:07.448 54.1d/s 838.1K/s 403 180 3213889 0 794
+    00:09.715 63.0d/s 961.4K/s 612 209 3172256 0 1081
+    00:12.000 73.2d/s 1036.1K/s 878 266 3167860 0 1404
+    00:14.385 75.2d/s 1079.9K/s 1082 204 3174907 0 1756
+    ^Cstreamed 1158 docs 1082 bytes xfer 15906901 errors 0
+
+If you're at a café or want to use a local copy of the dump, supply `--source`:
+
+    % ./stream2es wiki --max-docs 5 --source /d/data/enwiki-20121201-pages-articles.xml.bz2
 
 ## Generator
 
@@ -86,36 +117,6 @@ done
 
 Fortunately, most *nix systems come with `/usr/share/dict/words` (Ubuntu package `wamerican-small`, for example), which is a great choice if you just need some (English) text.  Install other langs if you prefer.
 
-
-## Wikipedia
-
-Index the latest Wikipedia article dump.
-
-    % stream2es wiki --target http://localhost:9200/tmp
-    create index http://localhost:9200/tmp
-    stream wiki from http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-art
-    icles.xml.bz2
-    00:04.984 44.7d/s 622.7K/s 223 223 3177989 0 10
-    00:07.448 54.1d/s 838.1K/s 403 180 3213889 0 794
-    00:09.715 63.0d/s 961.4K/s 612 209 3172256 0 1081
-    00:12.000 73.2d/s 1036.1K/s 878 266 3167860 0 1404
-    00:14.385 75.2d/s 1079.9K/s 1082 204 3174907 0 1756
-    ^Cstreamed 1158 docs 1082 bytes xfer 15906901 errors 0
-
-What is the output telling me?
-
-    00:12.000: MM:SS that the app has been running
-      73.2d/s: Docs per second indexed
-    1036.1K/s: Bytes per second indexed (bulk transferred over the wire)
-          878: Total docs indexed so far
-          266: Docs in bulk
-      3167860: Total JSON bytes of docs in the bulk
-            0: Total docs that have had indexing errors so far
-         1404: The _id of the first doc in the bulk
-
-If you're at a café or want to use a local copy of the dump, supply `--source`:
-
-    % ./stream2es wiki --max-docs 5 --source /d/data/enwiki-20121201-pages-articles.xml.bz2
 
 ## Elasticsearch
 
