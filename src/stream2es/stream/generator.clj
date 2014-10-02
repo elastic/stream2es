@@ -78,8 +78,8 @@
       :default 40
       :parse-fn #(Integer/parseInt %)]
      ["--target" "ES index" :default "http://localhost:9200/foo/t"]
-     ["--dictionary" "Dictionary location" :default nil]
-     ["--fields" "Field template" :default ""]
+     ["--dictionary" "Dictionary location" :default "/usr/share/dict/words"]
+     ["--fields" "Field template" :default "f1:str:1"]
      ["--stream-buffer" "Buffer up to this many docs"
       :default 100000
       :parse-fn #(Integer/parseInt %)]])
