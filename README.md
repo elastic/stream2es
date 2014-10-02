@@ -4,7 +4,7 @@ Standalone utility to stream different inputs into Elasticsearch.
 
 ## Read This First
 
-*If you've just wandered here, first check out [Logstash](http://github.com/elasticsearch/logstash).  It's a much more general tool, and one of our featured products.  If for some reason it doesn't do something that's important to you, create an issue there.  stream2es is mostly a quick hack to ingest a bit of data so you can get working with ES.  We will fix bugs as we have time.*
+*If you've just wandered here, first check out [Logstash](http://github.com/elasticsearch/logstash).  It's a much more general tool, and one of our featured products.  If for some reason it doesn't do something that's important to you, create an issue there.  stream2es is a dev tool that originated before the author knew much about Logstash.  That said, there are some important differences that are specific to Elasticsearch.  stream2es supports bulks by byte-length (`--bulk-bytes`) instead of doc count, which is crucial with docs of varying size.  It also supports exporting raw bulks via `--tee-bulk` to a hashed dir on the filesystem.  Finally, the biggest difference is that you can make the incoming stream finite with `--max-docs`.*
 
 ## Install
 
