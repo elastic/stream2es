@@ -1,36 +1,37 @@
 (ns stream2es.log
   (:refer-clojure :exclude [flush])
+  (:require [taoensso.timbre :as t]
+            [clojure.string :as str])
   (:import (java.util.concurrent Executors)))
 
-(def svc (Executors/newFixedThreadPool 1))
+(t/merge-config!
+ {:timestamp-pattern "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+  :timestamp-locale java.util.Locale/ROOT
+  :fmt-output-fn
+  (fn [{:keys [level throwable message timestamp hostname ns]}
+       & [{:keys [nofonts?] :as appender-fmt-output-opts}]]
+    (format "%s %-5s %s%s" timestamp
+            (-> level name str/upper-case)
+            (or message "")
+            (or (t/stacktrace throwable "\n" (when nofonts? {})) "")))})
 
-(def logger-agent (agent nil))
-
-(defn print-log [msg]
-  (->> msg
-       (interpose " ")
-       (apply str)
-       println))
-
-(defn log [& msg]
-  (send-via svc logger-agent
-            (fn [_]
-              (print-log msg))))
-
-(def ^:dynamic *debug* false)
-
-(def ^:dynamic *trace* false)
+(defn init! [opts]
+  (t/set-level! (-> opts :log str/lower-case keyword)))
 
 (defmacro trace [& msg]
-  (when *trace*
-    `(apply log ~(vec msg))))
+  `(t/trace ~@msg))
 
 (defmacro debug [& msg]
-  (when *debug*
-    `(apply log ~(vec msg))))
+  `(t/debug ~@msg))
 
 (defmacro info [& msg]
-  `(apply log ~(vec msg)))
+  `(t/info ~@msg))
+
+(defmacro warn [& msg]
+  `(t/warn ~@msg))
+
+(defmacro error [& msg]
+  `(t/error ~@msg))
 
 (defn flush []
   (dotimes [_ 3]

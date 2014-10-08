@@ -21,38 +21,20 @@ Then download `stream2es`:
 By default, `stream2es` reads JSON documents from stdin.
 
 ```
-% echo '{"field":1}' | stream2es
-create index http://localhost:9200/foo
-stream stdin to http://localhost:9200/foo/t
-flushing index queue
-00:00.346 2.9d/s 0.1K/s 1 1 48 0
-streamed 1 indexed 1 bytes xfer 48 errors 0
-done
+% echo '{"f":1}' | stream2es
+2014-10-08T12:29:56.318-0500 INFO  00:00.116 8.6d/s 0.4K/s (0.0mb) indexed 1 streamed 1 errors 0
 %
 ```
 
-What is the output telling me?
-
-    00:00.346: MM:SS that the app has been running
-       2.9d/s: Docs per second indexed
-       0.1K/s: Bytes per second indexed (bulk transferred over the wire)
-            1: Total docs indexed so far
-            1: Docs in bulk
-           48: Total JSON bytes of docs in the bulk
-            0: Total docs that have had indexing errors so far
+If you want more logging, set `--log debug`.  If you don't want any output, set `--log warn`.
 
 ## Wikipedia
 
 Index the latest Wikipedia article dump.
 
-    % stream2es wiki --target http://localhost:9200/tmp
+    % stream2es wiki --target http://localhost:9200/tmp --log debug
     create index http://localhost:9200/tmp
     stream wiki from http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
-    00:04.984 44.7d/s 622.7K/s 223 223 3177989 0 10
-    00:07.448 54.1d/s 838.1K/s 403 180 3213889 0 794
-    00:09.715 63.0d/s 961.4K/s 612 209 3172256 0 1081
-    00:12.000 73.2d/s 1036.1K/s 878 266 3167860 0 1404
-    00:14.385 75.2d/s 1079.9K/s 1082 204 3174907 0 1756
     ^Cstreamed 1158 docs 1082 bytes xfer 15906901 errors 0
 
 If you're at a café or want to use a local copy of the dump, supply `--source`:
@@ -86,12 +68,6 @@ foo
 bar
 baz
 EOF
-create index http://localhost:9200/foo
-stream generator to http://localhost:9200/foo/t
-flushing index queue
-00:00.279 17.9d/s 1.1K/s 5 5 305 0
-streamed 5 indexed 5 bytes xfer 305 errors 0
-done
 % curl -s localhost:9200/foo/_search\?format=yaml | fgrep -A2 _source
     _source:
       f1: 28

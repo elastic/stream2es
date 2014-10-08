@@ -26,7 +26,9 @@
   ([code s]
      (quit code "%s" s))
   ([code fmt & s]
-     (log/info (apply format fmt s))
+     (if (pos? code)
+       (log/error (apply format fmt s))
+       (log/debug (apply format fmt s)))
      (when quit?
        (log/flush)
        (shutdown-agents)
@@ -53,10 +55,10 @@
   (let [itemct (count (:items @state))
         items (:items @state)]
     (when (pos? itemct)
-      #_(log/info
-         (format ">--> %d items; %d bytes; first-id %s"
-                 itemct (:bytes @state)
-                 (-> items first :meta :index :_id)))
+      (log/trace
+       (format ">--> flush-bulk %d items; %d bytes; first-id %s"
+               itemct (:bytes @state)
+               (-> items first :meta :index :_id)))
       ((:indexer @state) items)
       (dosync
        (alter state assoc :bytes 0)
@@ -78,12 +80,12 @@
   (>= (:skip @state) (get-in @state [:total :streamed :docs])))
 
 (defn flush-indexer [state]
-  (log/info "flushing index queue")
+  (log/trace "flushing index queue")
   (dotimes [_ (:workers @state)]
     ((:indexer @state) :stop)))
 
 (defn want-shutdown [state]
-  (log/debug "want shutdown")
+  (log/trace "want shutdown")
   (flush-bulk state)
   (flush-indexer state))
 
@@ -92,7 +94,7 @@
     (let [sub (s/hash-dir 2)
           path (io/file path sub)
           f (io/file path (str name ".gz"))]
-      (log/debug "save" (str f) (count (.getBytes data)) "bytes")
+      (log/trace "save" (str f) (count (.getBytes data)) "bytes")
       (.mkdirs (io/file path))
       (io/spit-gz f data))))
 
@@ -122,7 +124,7 @@
               (System/currentTimeMillis)
               (get-in @state [:total :indexed :docs])
               (get-in @state [:total :indexed :wire-bytes]))]
-    (log/info
+    (log/debug
      (format "%s %.1fd/s %.1fK/s %d %d %d %d%s"
              (rate :minsecs)
              (rate :docs-per-sec)
@@ -151,7 +153,7 @@
                     + idxbulkbytes)
              (alter state update-in [:total :errors] (fnil + 0) (or errors 0)))
             (index-status first-id (count bulk) idxbulkbytes state))
-          (log/debug "adding indexed total"
+          (log/trace "adding indexed total"
                      (get-in @state [:total :indexed :docs])
                      "+" (count bulk))
           (when (:tee-bulk @state)
@@ -167,11 +169,11 @@
         latch (CountDownLatch. (:workers @state))
         disp (fn []
                (index-bulk q state)
-               (log/debug "waiting for POSTs to finish")
+               (log/trace "waiting for POSTs to finish")
                (.countDown latch))
         lifecycle (fn []
                     (.await latch)
-                    (log/debug "done indexing")
+                    (log/trace "done indexing")
                     ((:indexer-notifier @state)))]
     ;; start index pool
     (dotimes [n (:workers @state)]
@@ -206,7 +208,7 @@
                      (recur)))))
         lifecycle (fn []
                     (.await latch)
-                    (log/debug "done collecting")
+                    (log/trace "done collecting")
                     ((:collector-notifier @state)))]
     (.start (Thread. disp "stream dispatcher"))
     (.start (Thread. lifecycle "stream service"))
@@ -244,7 +246,8 @@
                       {:started-at (System/currentTimeMillis)
                        :bytes 0
                        :items []
-                       :total {:indexed {:docs 0
+                       :total {:errors 0
+                               :indexed {:docs 0
                                          :bytes 0
                                          :wire-bytes 0}
                                :streamed {:docs 0
@@ -275,12 +278,15 @@
                     (-> @state :total :errors))))
                 (reset! printed-done? true)))
         done (fn []
-               (log/debug "waiting for collectors")
+               (log/trace "waiting for collectors")
                (.await collector-latch)
-               (log/debug "waiting for indexers")
+               (log/trace "waiting for indexers")
                (.await indexer-latch)
                (end)
-               (quit 0 "done"))]
+               (if (pos? (-> @state :total :errors))
+                 (quit 1 (format "finished with %d errors"
+                                 (-> @state :total :errors)))
+                 (quit 0 "done")))]
     (.start (Thread. done "lifecycle"))
     (.addShutdownHook
      (Runtime/getRuntime) (Thread. end "SIGTERM handler"))
@@ -296,7 +302,7 @@
     (when replace
       (es/delete idx-url))
     (when-not (es/exists? idx-url)
-      (log/info "create index" idx-url)
+      (log/debug "create index" idx-url)
       (let [mappings (merge (stream/mappings stream opts)
                             (json/decode mappings true))
             settings (merge (stream/settings stream opts)
@@ -310,7 +316,7 @@
     (try
       (when (:indexing @state)
         (ensure-index @state)
-        (log/info
+        (log/debug
          (format "stream %s%sto %s"
                  (:cmd @state)
                  (if (:source @state)
@@ -318,9 +324,9 @@
                    " ")
                  (:target @state))))
       (when (:tee-bulk @state)
-        (log/info (format "saving bulks to %s" (:tee-bulk @state))))
+        (log/debug (format "saving bulks to %s" (:tee-bulk @state))))
       (when (:tee @state)
-        (log/info (format "saving json to %s" (:tee @state))))
+        (log/debug (format "saving json to %s" (:tee @state))))
       (stream! state)
       (catch java.net.ConnectException e
         (throw+ {:type ::network} "%s connection refused" (:target @state))))))
@@ -334,8 +340,6 @@
      (quit 0 (or msg (help))))
    (catch [:type :version] _
      (quit 0 (format "stream2es %s" (version))))
-   (catch [:type ::done] _
-     (quit 0 (:message &throw-context)))
    (catch [:type :stream2es.auth/nocreds] _
      (quit 11 (format "Error: %s" (:message &throw-context))))
    (catch [:type :stream2es.bootstrap/badcmd] _

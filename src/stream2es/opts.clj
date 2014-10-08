@@ -44,7 +44,13 @@
               (java.io.File/separator)
               ".authinfo.stream2es")]
    ["--target" "ES location" :default "http://localhost:9200"]
-   ["-h" "--help" "Display help" :flag true :default false]])
+   ["-h" "--help" "Display help" :flag true :default false]
+   ["--log" (format "Log level (%s)"
+                    (->> taoensso.timbre/levels-ordered
+                         (interpose " ")
+                         (map name)
+                         (apply str)))
+    :default "info"]])
 
 (defn need-help? [tok]
   (when (some (partial = tok) ["help" "--help" "-help" "-h"])

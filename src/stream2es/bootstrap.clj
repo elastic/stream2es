@@ -2,7 +2,8 @@
   (:require [slingshot.slingshot :refer [throw+]])
   (:require [stream2es.auth :as auth]
             [stream2es.help :as help]
-            [stream2es.opts :as opts])
+            [stream2es.opts :as opts]
+            [stream2es.log :as log])
   (:require [stream2es.stream :as stream]
             [stream2es.stream.es]
             [stream2es.stream.generator]
@@ -56,6 +57,7 @@
   (let [[cmd stream] (maybe-get-stream args)
         [optmap args _] (opts/parse args (concat opts/common
                                                  (stream/specs stream)))]
+    (log/init! optmap)
     (when (:help optmap)
       (throw+ {:type :help :msg (help stream)}))
     (when (and (= cmd 'twitter) (:authorize optmap))
