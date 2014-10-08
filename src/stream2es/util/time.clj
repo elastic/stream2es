@@ -9,3 +9,6 @@
   (let [mins (Math/floor (float (/ secs 60)))
         secs (Math/abs (- secs (* mins 60)))]
     (format "%02d:%06.3f" (int  mins) secs)))
+
+(defn secs [ms]
+  (float (/ ms 1e3)))

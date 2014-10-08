@@ -8,11 +8,11 @@
             [stream2es.es :as es]
             [stream2es.log :as log]
             [stream2es.opts :as opts]
+            [stream2es.util.rate :as rate]
             [stream2es.size :refer [size-of]]
             [stream2es.stream :as stream]
             [stream2es.util.io :as io]
             [stream2es.util.string :as s]
-            [stream2es.util.time :as time]
             [stream2es.version :refer [version]])
   (:import (java.util.concurrent CountDownLatch
                                  LinkedBlockingQueue
@@ -117,21 +117,16 @@
          (apply str))))
 
 (defn index-status [id bulk-count bulk-bytes state]
-  (let [upmillis (- (System/currentTimeMillis) (:started-at @state))
-        upsecs (float (/ upmillis 1e3))
-        index-doc-rate (/ (get-in @state [:total :indexed :docs]) upsecs)
-        index-kbyte-rate (/
-                          (/ (get-in @state [:total :indexed :wire-bytes]) 1024)
-                          upsecs)
-        #_stream-doc-rate #_(/ (get-in @state [:total :streamed :docs]) upsecs)
-        #_stream-kbyte-rate #_(/
-                               (/ (get-in @state [:total :streamed :bytes])
-                                  1024)
-                               upsecs)]
+  (let [rate (rate/calc
+              (:started-at @state)
+              (System/currentTimeMillis)
+              (get-in @state [:total :indexed :docs])
+              (get-in @state [:total :indexed :wire-bytes]))]
     (log/info
      (format "%s %.1fd/s %.1fK/s %d %d %d %d%s"
-             (time/minsecs upsecs)
-             index-doc-rate index-kbyte-rate
+             (rate :minsecs)
+             (rate :docs-per-sec)
+             (rate :kb-per-sec)
              (get-in @state [:total :indexed :docs])
              bulk-count bulk-bytes
              (get-in @state [:total :errors])
@@ -262,13 +257,22 @@
         printed-done? (atom false)
         end (fn []
               (when-not @printed-done?
-                (log/info
-                 (format
-                  "streamed %d indexed %d bytes xfer %d errors %d"
-                  (-> @state :total :streamed :docs)
-                  (-> @state :total :indexed :docs)
-                  (-> @state :total :indexed :wire-bytes)
-                  (-> @state :total :errors)))
+                (let [rate (rate/calc
+                            (:started-at @state)
+                            (System/currentTimeMillis)
+                            (-> @state :total :indexed :docs)
+                            (-> @state :total :indexed :wire-bytes))]
+                  (log/info
+                   (format
+                    (str "%s %.1fd/s %.1fK/s (%.1fmb) indexed %d "
+                         "streamed %d errors %d")
+                    (rate :minsecs)
+                    (rate :docs-per-sec)
+                    (rate :kb-per-sec)
+                    (rate :mb)
+                    (rate :docs)
+                    (-> @state :total :streamed :docs)
+                    (-> @state :total :errors))))
                 (reset! printed-done? true)))
         done (fn []
                (log/debug "waiting for collectors")
