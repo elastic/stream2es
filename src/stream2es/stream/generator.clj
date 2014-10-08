@@ -39,6 +39,17 @@
       (map->StringField
        (assoc field :value v )))))
 
+(defrecord DoubleField [name size]
+  Field
+  (make [field opts]
+    (let [v (Double/parseDouble
+             (format "%d.%d" (rand-int size) (rand-int 1000000)))]
+      (map->DoubleField
+       {:type :double
+        :name name
+        :size size
+        :value v}))))
+
 (extend-protocol FieldSpec
   String
   (parse [spec]
@@ -50,6 +61,8 @@
           "integer" (IntField. name size)
           "str" (StringField. name size)
           "string" (StringField. name size)
+          "dbl" (DoubleField. name size)
+          "double" (DoubleField. name size)
           (StringField. name size))))))
 
 (defn parse-fields [template]
