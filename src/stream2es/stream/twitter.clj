@@ -21,6 +21,9 @@
 (def weird-twitter-date-format
   "EEE MMM dd HH:mm:ss Z yyyy")
 
+(def date-format
+  (format "date_optional_time||%s" weird-twitter-date-format))
+
 (def locale
   "en_EN")
 
@@ -93,23 +96,23 @@
                              "date_optional_time"]
       :properties
       {:created_at {:type :date
-                    :format weird-twitter-date-format
+                    :format date-format
                     :locale locale}
        :user
        {:properties
         {:created_at {:type :date
-                      :format weird-twitter-date-format
+                      :format date-format
                       :locale locale}}}
 
        :retweeted_status
        {:properties
         {:created_at {:type :date
-                      :format weird-twitter-date-format
+                      :format date-format
                       :locale locale}
          :user
          {:properties
           {:created_at {:type :date
-                        :format weird-twitter-date-format
+                        :format date-format
                         :locale locale}}}}}
        :entities
        {:properties
