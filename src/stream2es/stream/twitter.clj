@@ -123,6 +123,9 @@
        :coordinates
        {:properties
         {:coordinates {:type "geo_point"}}}
+       :geo
+       {:properties
+        {:coordinates {:type "geo_point"}}}
        :place
        {:dynamic true
         :properties
