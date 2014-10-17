@@ -51,4 +51,8 @@
 (extend-type String
   Streamable
   (make-source [doc opts]
-    (json/decode doc true)))
+    (let [{:keys [_id id] :as document} (json/decode doc true)]
+      ;; if an id is available, the capture it
+      (if-let [doc-id (or _id id)]
+        (merge document {:__s2e_meta__ {:_id doc-id}})
+        document))))
