@@ -1,4 +1,5 @@
-(ns stream2es.util.data)
+(ns stream2es.util.data
+  (:require [clojure.string :as str]))
 
 (defn dissoc-in
   "Dissociates an entry from a nested associative structure returning a new
@@ -26,3 +27,17 @@
        (if (apply f val args)
          (dissoc-in m ks)
          m))))
+
+(defn re-replace-keys
+  ([m pat]
+     (re-replace-keys m pat ""))
+  ([m pat replacement]
+     (reduce (fn [a [k v]]
+               (assoc a
+                 (keyword
+                  (str/replace (name k) pat replacement)) v))
+             {}
+             (select-keys m (->> (keys m)
+                                 (map name)
+                                 (filter #(re-find pat %))
+                                 (map keyword))))))

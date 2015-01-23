@@ -1,5 +1,6 @@
 (ns stream2es.opts
   (:require [clojure.tools.cli :refer [cli]]
+            [stream2es.util.data :refer [re-replace-keys]]
             [slingshot.slingshot :refer [try+ throw+]]))
 
 (def indexing-threads 2)
@@ -50,7 +51,13 @@
                          (interpose " ")
                          (map name)
                          (apply str)))
-    :default "info"]])
+    :default "info"]
+   ["--http-insecure" "Don't verify peer cert" :flag true :default false]
+   ["--http-keystore" "/path/to/keystore"]
+   ["--http-keystore-pass" "Keystore password"]
+   ["--http-trust-store" "/path/to/keystore"]
+   ["--http-trust-store-pass" "Truststore password"]
+   ])
 
 (defn need-help? [tok]
   (when (some (partial = tok) ["help" "--help" "-help" "-h"])
@@ -58,8 +65,15 @@
   (when (some (partial = tok) ["version" "--version" "-version" "-v"])
     (throw+ {:type :version})))
 
+(defn expand-http [[opts args x]]
+  [(assoc opts
+     :http (re-replace-keys opts #"^http-"))
+   args
+   x])
+
 (defn parse [args specs]
   (try
-    (apply cli args specs)
+    (-> (apply cli args specs)
+        expand-http)
     (catch Exception e
       (throw+ {:type ::badarg} (.getMessage e)))))
