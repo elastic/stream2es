@@ -2,6 +2,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [stream2es.es :as es]
+            [stream2es.http :as http]
             [stream2es.stream :refer [new Stream
                                       Streamable CommandLine
                                       StreamStorage]]))
@@ -44,7 +45,7 @@
     {:index.number_of_shards 2
      :index.number_of_replicas 0})
   (mappings [_ opts]
-    {(keyword (-> opts :target es/components :type))
+    {(keyword (-> opts :target es/type-name))
      {:_all {:enabled false}
       :properties {}}}))
 

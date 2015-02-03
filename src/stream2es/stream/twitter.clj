@@ -87,7 +87,7 @@
                         :output_unigrams_if_no_shingles true
                         :token_separator " "}}}})
   (mappings [_ opts]
-    {(or (keyword (-> opts :target es/components :type))
+    {(or (keyword (-> opts :target es/type-name))
          default-type)
      {:_all {:enabled false}
       :_size {:enabled true :store true}
@@ -153,7 +153,7 @@
         (-> (dissoc status* :id)
             (assoc :__s2e_meta__
               {:_id (:id status*)
-               :_type (or (keyword (-> opts :target es/components :type))
+               :_type (or (keyword (-> opts :target es/type-name))
                           default-type)})
             (remove-in-if [:place :bounding_box] nil?)
             (remove-in-if [:place :bounding_box] single-point?)

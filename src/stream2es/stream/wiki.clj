@@ -1,10 +1,11 @@
 (ns stream2es.stream.wiki
   (:require [stream2es.stream :refer [new Stream Streamable
-                                      StreamStorage CommandLine]])
-  (:import (java.net URL MalformedURLException)
-           (org.elasticsearch.river.wikipedia.support
+                                      StreamStorage CommandLine]]
+            [stream2es.http :as http])
+  (:import (org.elasticsearch.river.wikipedia.support
             PageCallbackHandler WikiPage
-            WikiXMLParserFactory)))
+            WikiXMLParserFactory)
+           (stream2es.http Target)))
 
 (declare make-parser make-callback)
 
@@ -38,7 +39,7 @@
       :parse-fn #(Integer/parseInt %)]])
   Stream
   (bootstrap [_ opts]
-    {})
+    {:source (http/make-target (:source opts))})
   (make-runner [this opts handler]
     (let [stream (make-parser (:source opts) handler)]
       (WikiStreamRunner. #(.parse stream))))
@@ -57,9 +58,9 @@
   (make-source [page opts]
     {:__s2e_meta__ {:_id (.getID page)
                     :_type (cond
-                            (.isDisambiguationPage page) :disambiguation
-                            (.isRedirect page) :redirect
-                            :else :page)}
+                             (.isDisambiguationPage page) :disambiguation
+                             (.isRedirect page) :redirect
+                             :else :page)}
      :title (-> page .getTitle str .trim)
      :text (-> (.getText page) .trim)
      :redirect (.isRedirect page)
@@ -74,12 +75,6 @@
     (process [_ page]
       (f page))))
 
-(defn url [s]
-  (try
-    (URL. s)
-    (catch MalformedURLException _
-      (URL. (str "file://" s)))))
-
-(defn make-parser [loc handler]
-  (doto (WikiXMLParserFactory/getSAXParser (url loc))
+(defn make-parser [target handler]
+  (doto (WikiXMLParserFactory/getSAXParser (http/jurl target))
     (.setPageCallback (make-callback handler))))

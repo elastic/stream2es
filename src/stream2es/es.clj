@@ -1,8 +1,27 @@
 (ns stream2es.es
+  (:refer-clojure :exclude [meta])
   (:require [cheshire.core :as json]
-            [clj-http.client :as http]
             [slingshot.slingshot :refer [try+ throw+]]
-            [stream2es.log :as log]))
+            [stream2es.http :as http]
+            [stream2es.log :as log])
+  (:import (stream2es.http Target)))
+
+(defprotocol EsUrl
+  (index-url [this])
+  (mapping-url [this])
+  (bulk-url [this])
+  (search-url [this])
+  (scroll-url [this]))
+
+(defprotocol IndexManager
+  (delete-index [this])
+  (put-index [this body])
+  (index-exists? [this])
+  (index-name [this])
+  (type-name [this])
+  (meta [this type])
+  (mapping [this])
+  (settings [this]))
 
 (defn components [url]
   (let [u (java.net.URL. url)
@@ -14,37 +33,33 @@
      :port (.getPort u)
      :index index
      :type type
-     :id id}))
-
-(defn base-url [full]
-  (let [u (components full)]
-    (apply format "%s://%s:%s" ((juxt :proto :host :port) u))))
-
-(defn index-url [url]
-  (let [{:keys [proto host port index]} (components url)]
-    (format "%s://%s:%s/%s" proto host port index)))
+     :id id
+     :user-info (.getUserInfo u)}))
 
 (defn put
-  ([url data]
-     (log/trace "PUT" (count (.getBytes data)) "bytes")
-     (http/put url {:body data})))
+  ([url opts]
+   (log/trace "PUT" (if (:body opts)
+                      (count (.getBytes (:body opts)))
+                      0)
+              "bytes")
+   (http/put url opts)))
 
 (defn post
-  ([url data]
-     (log/trace "POST" (count (.getBytes data)) "bytes")
-     (http/post url {:body data})))
+  ([url opts]
+   (log/trace "POST" (if (:body opts)
+                       (count (.getBytes (:body opts)))
+                       0)
+              "bytes")
+   (http/post url opts)))
 
 (defn delete [url]
   (log/info "delete index" url)
   (http/delete url {:throw-exceptions false}))
 
-(defn exists? [url]
-  (try
-    (http/get (format "%s/_mapping" (index-url url)))
-    (catch Exception _)))
-
-(defn error-capturing-bulk [url items serialize-bulk]
-  (let [resp (json/decode (:body (post url (serialize-bulk items))) true)]
+(defn error-capturing-bulk [target items serialize-bulk]
+  (let [resp (json/decode (:body (post (bulk-url target)
+                                       (assoc (.opts target)
+                                              :body (serialize-bulk items)))) true)]
     (->> (:items resp)
          (map-indexed (fn [n obj]
                         (when (contains? (val (first obj)) :error)
@@ -60,60 +75,91 @@
 
 (defn scroll*
   "One set of hits mid-scroll."
-  [url id ttl]
+  [target id ttl]
   (try+
    (let [resp (http/get
-               (format "%s/_search/scroll" url)
-               {:body id
-                :query-params {:scroll ttl}})]
+               (scroll-url target)
+               (merge {:body id
+                       :query-params {:scroll ttl}}
+                      (.opts target)))]
      (json/decode (:body resp) true))
    (catch Object {:keys [body]}
      (cond
-      (re-find #"SearchContextMissingException" body)
-      (throw+ {:type ::search-context-missing})
-      :else (throw+ {:type ::wat})))))
+       (re-find #"SearchContextMissingException" body)
+       (throw+ {:type ::search-context-missing})
+       :else (throw+ {:type ::wat})))))
 
 (defn scroll
   "lazy-seq of hits from on originating scroll_id."
-  [url id ttl]
-  (let [resp (scroll* url id ttl)
+  [target id ttl]
+  (let [resp (scroll* target id ttl)
         hits (-> resp :hits :hits)
         new-id (:_scroll_id resp)]
     (lazy-seq
      (when (seq hits)
-       (cons (first hits) (concat (rest hits) (scroll url new-id ttl)))))))
+       (cons (first hits) (concat (rest hits) (scroll target new-id ttl)))))))
 
 (defn scan1
   "Set up scroll context."
-  [url query ttl size]
+  [target query ttl size]
   (let [resp (http/get
-              (format "%s/_search" url)
-              {:body query
-               :query-params
-               {:search_type "scan"
-                :scroll ttl
-                :size size
-                :fields "_source,_routing,_parent"}})]
+              (search-url target)
+              (merge {:body query
+                      :query-params
+                      {:search_type "scan"
+                       :scroll ttl
+                       :size size
+                       :fields "_source,_routing,_parent"}}
+                     (.opts target)))]
     (json/decode (:body resp) true)))
 
 (defn scan
   "Client entry point. Returns a scrolling lazy-seq of hits."
-  [url query ttl size]
-  (let [resp (scan1 url query ttl size)]
-    (scroll (base-url url) (:_scroll_id resp) ttl)))
+  [target query ttl size]
+  (let [resp (scan1 target query ttl size)]
+    (scroll target (:_scroll_id resp) ttl)))
 
-(defn idx-meta [url suffix]
-  (let [resp (-> (format "%s/%s" url suffix)
-                 http/get
-                 :body
-                 (json/decode true))
-        index (:index (components url))]
-    (if index
-      (-> (resp (keyword index)) first val)
-      resp)))
+(extend-type Target
+  EsUrl
+  (index-url [this]
+    (format "%s/%s" (http/base-url this) (index-name this)))
+  (bulk-url [this]
+    (format "%s/%s" (.url this) "_bulk"))
+  (search-url [this]
+    (format "%s/_search" (.url this)))
+  (scroll-url [this]
+    (format "%s/_search/scroll" (http/base-url this)))
 
-(defn mapping [url]
-  (idx-meta url "_mapping"))
 
-(defn settings [url]
-  (idx-meta url "_settings"))
+  IndexManager
+  (index-name [this]
+    (:index (.components this)))
+  (type-name [this]
+    (:type (.components this)))
+  (delete-index [this]
+    (delete (index-url this)))
+  (index-exists? [this]
+    (try
+      (http/get (format "%s/_mapping" (index-url this)) (.opts this))
+      (catch Exception _)))
+  (put-index [this body]
+    (http/put (index-url this) (assoc (.opts this)
+                                      :body body)))
+  (meta [this suffix]
+    (let [resp (-> (http/get (format "%s/%s" (index-url this) suffix)
+                             (merge {:throw-exceptions? true} (.opts this)))
+                   :body
+                   (json/decode true))
+          index (index-name this)]
+      (-> (resp (keyword index)) first val)))
+
+  (mapping [this]
+    (meta this "_mapping"))
+  (settings [this]
+    (meta this "_settings")))
+
+(defn make-target
+  ([url]
+   (Target. url (components url) {}))
+  ([url http-opts]
+   (Target. url (components url) http-opts)))
