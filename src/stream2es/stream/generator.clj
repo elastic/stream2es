@@ -119,7 +119,7 @@
     {:number_of_shards 2
      :number_of_replicas 0})
   (mappings [_ opts]
-    {(keyword (-> opts :target es/components :type))
+    {(keyword (-> opts :target es/type-name))
      {:_all {:enabled false}
       :_size {:enabled true :store true}
       :properties {}}}))
