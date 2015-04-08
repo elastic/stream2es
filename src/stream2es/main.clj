@@ -28,7 +28,7 @@
   ([code fmt & s]
      (if (pos? code)
        (log/error (apply format fmt s))
-       (log/debug (apply format fmt s)))
+       (log/info (apply format fmt s)))
      (when quit?
        (log/flush)
        (shutdown-agents)
