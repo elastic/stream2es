@@ -109,7 +109,7 @@ Fortunately, most *nix systems come with `/usr/share/dict/words` (Ubuntu package
 
 ## Elasticsearch
 
-*Note: Logstash 1.5.0 has an [Elasticsearch input](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-elasticsearch.html) now.*
+*Note: Logstash 1.5.0 has an [Elasticsearch input](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-elasticsearch.html).*
 
 If you use the `es` stream, you can copy indices from one Elasticsearch to another.  Example:
 
