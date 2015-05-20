@@ -4,7 +4,7 @@ Standalone utility to stream different inputs into Elasticsearch.
 
 ## Read This First
 
-*If you've just wandered here, first check out [Logstash](http://github.com/elasticsearch/logstash).  It's a much more general tool, and one of our featured products.  If for some reason it doesn't do something that's important to you, create an issue there.  stream2es is a dev tool that originated before the author knew much about Logstash.  That said, there are some important differences that are specific to Elasticsearch.  stream2es supports bulks by byte-length (`--bulk-bytes`) instead of doc count, which is crucial with docs of varying size.  It also supports exporting raw bulks via `--tee-bulk` to a hashed dir on the filesystem.  Finally, the biggest difference is that you can make the incoming stream finite with `--max-docs`.*
+*If you've just wandered here, first check out [Logstash](http://github.com/elasticsearch/logstash).  It's a much more general tool, and one of our featured products.  If for some reason it doesn't do something that's important to you, create an issue there.  stream2es is a dev tool that originated before the author knew much about Logstash.  That said, there are some important differences that are specific to Elasticsearch.  stream2es supports bulks by byte-length (`--bulk-bytes`) instead of doc count, which is crucial with docs of varying size.  It also supports exporting raw bulks via `--tee-bulk` to a hashed dir on the filesystem, and you can make the incoming stream finite with `--max-docs`.*
 
 ## Install
 
@@ -108,6 +108,8 @@ Fortunately, most *nix systems come with `/usr/share/dict/words` (Ubuntu package
 
 
 ## Elasticsearch
+
+*Note: Logstash 1.5.0 has an [Elasticsearch input](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-elasticsearch.html) now.*
 
 If you use the `es` stream, you can copy indices from one Elasticsearch to another.  Example:
 
