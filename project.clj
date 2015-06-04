@@ -20,7 +20,7 @@
                  [org.tukaani/xz "1.3"]
                  [org.elasticsearch/elastiqueue "0.99.1"]
                  [com.taoensso/timbre "3.3.1"]
-                 [org.clojure/core.typed "0.2.77"]]
+                 [org.clojure/core.typed "0.3.0-alpha2"]]
   :plugins [[lein-bin "0.3.2"]]
   :aot :all
   :main stream2es.main
