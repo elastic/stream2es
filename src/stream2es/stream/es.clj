@@ -1,6 +1,7 @@
 (ns stream2es.stream.es
   (:require [cheshire.core :as json]
             [slingshot.slingshot :refer [try+ throw+]]
+            [stream2es.util.data :refer [re-replace-keys]]
             [stream2es.es :as es]
             [stream2es.stream :refer [new Stream Streamable
                                       StreamStorage CommandLine]]))
@@ -34,10 +35,17 @@
      ["--scroll-size" "Source scroll size"
       :default 500
       :parse-fn #(Integer/parseInt %)]
-     ["--scroll-time" "Source scroll context TTL" :default "60s"]])
+     ["--scroll-time" "Source scroll context TTL" :default "60s"]
+     ["--source-http-insecure" "Don't verify peer cert" :flag true :default false]
+     ["--source-http-keystore" "/path/to/keystore"]
+     ["--source-http-keystore-pass" "Keystore password"]
+     ["--source-http-trust-store" "/path/to/keystore"]
+     ["--source-http-trust-store-pass" "Truststore password"]
+     ])
   Stream
   (bootstrap [_ opts]
-    {})
+    (let [just-http (re-replace-keys opts #"^source-http-")]
+      {:source (es/make-target (:source opts) just-http)}))
   (make-runner [this opts handler]
     (ElasticsearchStreamRunner. (make-callback opts handler)))
   StreamStorage

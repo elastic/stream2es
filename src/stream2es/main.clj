@@ -142,9 +142,8 @@
               idxbulk (make-indexable-bulk bulk)
               idxbulkbytes (count (.getBytes idxbulk))]
           (let [bulk-bytes (reduce + (map #(get-in % [:meta :_bytes]) bulk))
-                url (format "%s/%s" (:target @state) "_bulk")
                 errors (when (:indexing @state)
-                         (es/error-capturing-bulk url bulk
+                         (es/error-capturing-bulk (:target @state) bulk
                                                   make-indexable-bulk))]
             (dosync
              (alter state update-in [:total :indexed :docs] + (count bulk))
@@ -221,7 +220,8 @@
     (let [source (stream/make-source stream-object @state)]
       (when source
         (dosync
-         (let [{:keys [index type]} (es/components (:target @state))
+         (let [index (es/index-name (:target @state))
+               type (es/type-name (:target @state))
                item (source2item index type
                                  (get-in @state [:total :streamed :docs])
                                  (:offset @state)
@@ -298,18 +298,17 @@
 
 (defn ensure-index [{:keys [stream target mappings settings replace]
                      :as opts}]
-  (let [idx-url (es/index-url target)]
-    (when replace
-      (es/delete idx-url))
-    (when-not (es/exists? idx-url)
-      (log/debug "create index" idx-url)
-      (let [mappings (merge (stream/mappings stream opts)
-                            (json/decode mappings true))
-            settings (merge (stream/settings stream opts)
-                            (json/decode settings true))]
-        (es/put idx-url (json/encode
-                         {:settings settings
-                          :mappings mappings}))))))
+  (when replace
+    (es/delete-index target))
+  (when-not (es/index-exists? target)
+    (log/debug "create index" (es/index-url target))
+    (let [mappings (merge (stream/mappings stream opts)
+                          (json/decode mappings true))
+          settings (merge (stream/settings stream opts)
+                          (json/decode settings true))]
+      (es/put-index target (json/encode
+                            {:settings settings
+                             :mappings mappings})))))
 
 (defn main [world]
   (let [state (start! world)]
@@ -320,9 +319,9 @@
          (format "stream %s%sto %s"
                  (:cmd @state)
                  (if (:source @state)
-                   (format " from %s " (:source @state))
+                   (format " from %s " (.url (:source @state)))
                    " ")
-                 (:target @state))))
+                 (.url (:target @state)))))
       (when (:tee-bulk @state)
         (log/debug (format "saving bulks to %s" (:tee-bulk @state))))
       (when (:tee @state)

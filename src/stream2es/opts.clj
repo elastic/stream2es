@@ -1,7 +1,8 @@
 (ns stream2es.opts
   (:require [clojure.tools.cli :refer [cli]]
-            [stream2es.util.data :refer [re-replace-keys]]
-            [slingshot.slingshot :refer [try+ throw+]]))
+            [slingshot.slingshot :refer [try+ throw+]]
+            [stream2es.es :as es]
+            [stream2es.util.data :refer [re-replace-keys]]))
 
 (def indexing-threads 2)
 
@@ -71,9 +72,16 @@
    args
    x])
 
+(defn attach-http-target [[opts args x]]
+  [(assoc opts
+     :target (es/make-target (:target opts) (:http opts)))
+   args
+   x])
+
 (defn parse [args specs]
   (try
     (-> (apply cli args specs)
-        expand-http)
+        expand-http
+        attach-http-target)
     (catch Exception e
       (throw+ {:type ::badarg} (.getMessage e)))))
