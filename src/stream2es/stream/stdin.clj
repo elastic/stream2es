@@ -42,8 +42,9 @@
              (recur in)))))))
   StreamStorage
   (settings [_ opts]
-    {:index.number_of_shards 2
-     :index.number_of_replicas 0})
+    {:index.number_of_shards 1
+     :index.number_of_replicas 0
+     :index.refresh_interval -1})
   (mappings [_ opts]
     {(keyword (-> opts :target es/type-name))
      {:_all {:enabled false}
@@ -52,4 +53,8 @@
 (extend-type String
   Streamable
   (make-source [doc opts]
-    (json/decode doc true)))
+    (let [{:keys [_id id] :as document} (json/decode doc true)]
+      ;; if an id is available, the capture it
+      (if-let [doc-id (or _id id)]
+        (merge document {:__s2e_meta__ {:_id doc-id}})
+        document))))
