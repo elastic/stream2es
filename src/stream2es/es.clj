@@ -160,6 +160,6 @@
 
 (defn make-target
   ([url]
-   (Target. url (components url) {}))
+   (make-target url (components url) {}))
   ([url http-opts]
-   (Target. url (components url) http-opts)))
+   (Target. url (http/make-jurl url) (components url) http-opts)))

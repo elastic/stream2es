@@ -76,5 +76,5 @@
       (f page))))
 
 (defn make-parser [target handler]
-  (doto (WikiXMLParserFactory/getSAXParser (http/jurl target))
+  (doto (WikiXMLParserFactory/getSAXParser (.jurl target))
     (.setPageCallback (make-callback handler))))
