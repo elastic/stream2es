@@ -63,5 +63,5 @@
   (mappings [_ opts]
     {(keyword (-> opts :target es/components :type))
      {:_all {:enabled false}
-      :_size {:enabled true :store true}
+      :_size {:enabled true}
       :properties {}}}))

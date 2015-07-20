@@ -121,5 +121,5 @@
   (mappings [_ opts]
     {(keyword (-> opts :target es/type-name))
      {:_all {:enabled false}
-      :_size {:enabled true :store true}
+      :_size {:enabled true}
       :properties {}}}))

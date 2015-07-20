@@ -51,7 +51,7 @@
      :query.default_field :text})
   (mappings [_ _]
     {:_default_ {:_all {:enabled false}
-                 :_size {:enabled true :store true}}}))
+                 :_size {:enabled true}}}))
 
 (extend-type WikiPage
   Streamable
