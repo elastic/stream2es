@@ -12,7 +12,7 @@
 (def bulk-bytes (* 3 1024 1024))
 
 (def latest-wiki
-  (str "http://download.wikimedia.org"
+  (str "https://dumps.wikimedia.org"
        "/enwiki/latest/enwiki-latest-pages-articles.xml.bz2"))
 
 (defrecord WikiStream [])
