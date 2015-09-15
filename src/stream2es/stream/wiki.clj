@@ -50,8 +50,7 @@
      :index.refresh_interval :5s
      :query.default_field :text})
   (mappings [_ _]
-    {:_default_ {:_all {:enabled false}
-                 :_size {:enabled true}}}))
+    {:_default_ {:_all {:enabled false}}}))
 
 (extend-type WikiPage
   Streamable
