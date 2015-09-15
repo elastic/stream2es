@@ -3,7 +3,8 @@
   (:require [cheshire.core :as json]
             [slingshot.slingshot :refer [try+ throw+]]
             [stream2es.http :as http]
-            [stream2es.log :as log])
+            [stream2es.log :as log]
+            [stream2es.util.typed :refer [unnullable]])
   (:import (stream2es.http Target)))
 
 (defprotocol EsUrl
@@ -133,9 +134,11 @@
 
   IndexManager
   (index-name [this]
-    (:index (.components this)))
+    (unnullable ::index-name
+                (:index (.components this))))
   (type-name [this]
-    (:type (.components this)))
+    (unnullable ::type-name
+                (:type (.components this))))
   (delete-index [this]
     (delete (index-url this)))
   (index-exists? [this]

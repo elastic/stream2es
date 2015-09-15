@@ -8,3 +8,9 @@
      (typed/tc-ignore
       (slingshot/throw+ o#))
      (throw (Exception. "something went wrong with slingshot/throw+"))))
+
+(defmacro unnullable [place object]
+  `(if ~object
+     ~object
+     (slingshot/throw+ {:type ::badnull
+                        :where ~place})))
