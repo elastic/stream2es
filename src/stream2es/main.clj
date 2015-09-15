@@ -352,4 +352,4 @@
    (catch Object _
      (let [t (:throwable &throw-context)]
        (.printStackTrace t)
-       (quit 99 "unexpected exception: %s" (str t))))))
+       (quit 99 "unexpected exception: see above")))))
