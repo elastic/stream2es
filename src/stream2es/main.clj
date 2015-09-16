@@ -13,6 +13,7 @@
             [stream2es.stream :as stream]
             [stream2es.util.io :as io]
             [stream2es.util.string :as s]
+            [stream2es.util.stacktrace :as stack]
             [stream2es.version :refer [version]])
   (:import (java.util.concurrent CountDownLatch
                                  LinkedBlockingQueue
@@ -24,17 +25,17 @@
 
 (defn quit
   ([code s]
-     (quit code "%s" s))
+   (quit code "%s" s))
   ([code fmt & s]
-     (if (pos? code)
-       (log/error (apply format fmt s))
-       (log/info (apply format fmt s)))
-     (when quit?
-       (log/flush)
-       (shutdown-agents)
-       (System/exit code))))
+   (if (pos? code)
+     (log/error (apply format fmt s))
+     (log/info (apply format fmt s)))
+   (when quit?
+     (log/flush)
+     (shutdown-agents)
+     (System/exit code))))
 
-(defn source2item [_index _type offset store-offset? source]
+(defn source2item [_type offset store-offset? source]
   (let [s2e-meta (:__s2e_meta__ source)]
     (BulkItem.
      {:index
@@ -144,17 +145,21 @@
           (let [bulk-bytes (reduce + (map #(get-in % [:meta :_bytes]) bulk))
                 errors (when (:indexing @state)
                          (es/error-capturing-bulk (:target @state) bulk
-                                                  make-indexable-bulk))]
+                                                  make-indexable-bulk)
+                         (dosync
+                          (alter state update-in [:total :indexed :docs]
+                                 + (count bulk))
+                          (alter state update-in [:total :indexed :bytes]
+                                 + bulk-bytes)
+                          (alter state update-in [:total :indexed :wire-bytes]
+                                 + idxbulkbytes))
+                         (log/trace "adding indexed total"
+                                    (get-in @state [:total :indexed :docs])
+                                    "+" (count bulk)))]
             (dosync
-             (alter state update-in [:total :indexed :docs] + (count bulk))
-             (alter state update-in [:total :indexed :bytes] + bulk-bytes)
-             (alter state update-in [:total :indexed :wire-bytes]
-                    + idxbulkbytes)
-             (alter state update-in [:total :errors] (fnil + 0) (or errors 0)))
+             (alter state update-in [:total :errors]
+                    (fnil + 0) (or errors 0)))
             (index-status first-id (count bulk) idxbulkbytes state))
-          (log/trace "adding indexed total"
-                     (get-in @state [:total :indexed :docs])
-                     "+" (count bulk))
           (when (:tee-bulk @state)
             (spit-mkdirs
              (:tee-bulk @state) (str first-id ".bulk") idxbulk))
@@ -220,9 +225,8 @@
     (let [source (stream/make-source stream-object @state)]
       (when source
         (dosync
-         (let [index (es/index-name (:target @state))
-               type (es/type-name (:target @state))
-               item (source2item index type
+         (let [type (es/type-name (:target @state))
+               item (source2item type
                                  (get-in @state [:total :streamed :docs])
                                  (:offset @state)
                                  source)]
@@ -349,7 +353,14 @@
      (quit 14 (format "Network error: %s" (:message &throw-context))))
    (catch [:type :stream-death] {:keys [msg]}
      (quit 15 (format "stream terminated: %s" msg)))
+   (catch [:type :stream-invalid-args] {:keys [msg stream]}
+     (quit 16 (format "%s args invalid: %s" stream msg)))
+   (catch [:type :bad-null-bad] {:keys [where]}
+     (quit 98 (format "bad unhandled NULL around [[ %s ]]:\n\n%s"
+                      where
+                      (stack/stacktrace
+                       (:throwable &throw-context)))))
    (catch Object _
      (let [t (:throwable &throw-context)]
        (.printStackTrace t)
-       (quit 99 "unexpected exception: %s" (str t))))))
+       (quit 99 "unexpected exception: see above")))))

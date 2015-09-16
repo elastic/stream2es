@@ -12,5 +12,5 @@
 (defmacro unnullable [place object]
   `(if ~object
      ~object
-     (slingshot/throw+ {:type ::badnull
+     (slingshot/throw+ {:type :bad-null-bad
                         :where ~place})))
