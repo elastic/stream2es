@@ -13,6 +13,7 @@
             [stream2es.stream :as stream]
             [stream2es.util.io :as io]
             [stream2es.util.string :as s]
+            [stream2es.util.stacktrace :as stack]
             [stream2es.version :refer [version]])
   (:import (java.util.concurrent CountDownLatch
                                  LinkedBlockingQueue
@@ -351,6 +352,10 @@
    (catch [:type :stream-invalid-args] {:keys [msg stream]}
      (quit 16 (format "%s args invalid: %s" stream msg)))
    (catch [:type :bad-null-bad] {:keys [where]}
+     (quit 98 (format "bad unhandled NULL around [[ %s ]]:\n\n%s"
+                      where
+                      (stack/stacktrace
+                       (:throwable &throw-context)))))
    (catch Object _
      (let [t (:throwable &throw-context)]
        (.printStackTrace t)

@@ -123,7 +123,8 @@
 (extend-type Target
   EsUrl
   (index-url [this]
-    (format "%s/%s" (http/base-url this) (index-name this)))
+    (format "%s/%s" (http/base-url this)
+            (unnullable ::index-name (index-name this))))
   (bulk-url [this]
     (format "%s/%s" (.url this) "_bulk"))
   (search-url [this]
@@ -134,11 +135,9 @@
 
   IndexManager
   (index-name [this]
-    (unnullable ::index-name
-                (:index (.components this))))
+    (:index (.components this)))
   (type-name [this]
-    (unnullable ::type-name
-                (:type (.components this))))
+    (:type (.components this)))
   (delete-index [this]
     (delete (index-url this)))
   (index-exists? [this]
