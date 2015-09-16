@@ -145,17 +145,21 @@
           (let [bulk-bytes (reduce + (map #(get-in % [:meta :_bytes]) bulk))
                 errors (when (:indexing @state)
                          (es/error-capturing-bulk (:target @state) bulk
-                                                  make-indexable-bulk))]
+                                                  make-indexable-bulk)
+                         (dosync
+                          (alter state update-in [:total :indexed :docs]
+                                 + (count bulk))
+                          (alter state update-in [:total :indexed :bytes]
+                                 + bulk-bytes)
+                          (alter state update-in [:total :indexed :wire-bytes]
+                                 + idxbulkbytes))
+                         (log/trace "adding indexed total"
+                                    (get-in @state [:total :indexed :docs])
+                                    "+" (count bulk)))]
             (dosync
-             (alter state update-in [:total :indexed :docs] + (count bulk))
-             (alter state update-in [:total :indexed :bytes] + bulk-bytes)
-             (alter state update-in [:total :indexed :wire-bytes]
-                    + idxbulkbytes)
-             (alter state update-in [:total :errors] (fnil + 0) (or errors 0)))
+             (alter state update-in [:total :errors]
+                    (fnil + 0) (or errors 0)))
             (index-status first-id (count bulk) idxbulkbytes state))
-          (log/trace "adding indexed total"
-                     (get-in @state [:total :indexed :docs])
-                     "+" (count bulk))
           (when (:tee-bulk @state)
             (spit-mkdirs
              (:tee-bulk @state) (str first-id ".bulk") idxbulk))
