@@ -47,7 +47,7 @@
      ])
   Stream
   (bootstrap [_ opts]
-    (validate! (:source opts) (:target opts))
+    (validate! opts (:source opts) (:target opts))
     (let [just-http (re-replace-keys opts #"^source-http-")]
       {:source (es/make-target (:source opts) just-http)}))
   (make-runner [this opts handler]
@@ -100,14 +100,16 @@ pressure on one side or the other.
 
 Try either increasing --scroll-time or decreasing --scroll-size.
 
-")
-(defn validate! [source target]
+  ")
+
+(defn validate! [opts source target]
   (let [s* (es/components source)
         t* (.components target)
         spath [(:host s*) (:port s*)]
         tpath [(:host t*) (:port t*)]]
     (cond
-      (and (= spath tpath)
+      (and (:indexing opts)
+           (= spath tpath)
            (not (:index t*)))
       (throw+ {:type :stream-invalid-args
                :stream 'es
