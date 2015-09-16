@@ -24,17 +24,17 @@
 
 (defn quit
   ([code s]
-     (quit code "%s" s))
+   (quit code "%s" s))
   ([code fmt & s]
-     (if (pos? code)
-       (log/error (apply format fmt s))
-       (log/info (apply format fmt s)))
-     (when quit?
-       (log/flush)
-       (shutdown-agents)
-       (System/exit code))))
+   (if (pos? code)
+     (log/error (apply format fmt s))
+     (log/info (apply format fmt s)))
+   (when quit?
+     (log/flush)
+     (shutdown-agents)
+     (System/exit code))))
 
-(defn source2item [_index _type offset store-offset? source]
+(defn source2item [_type offset store-offset? source]
   (let [s2e-meta (:__s2e_meta__ source)]
     (BulkItem.
      {:index
@@ -220,9 +220,8 @@
     (let [source (stream/make-source stream-object @state)]
       (when source
         (dosync
-         (let [index (es/index-name (:target @state))
-               type (es/type-name (:target @state))
-               item (source2item index type
+         (let [type (es/type-name (:target @state))
+               item (source2item type
                                  (get-in @state [:total :streamed :docs])
                                  (:offset @state)
                                  source)]
@@ -349,6 +348,9 @@
      (quit 14 (format "Network error: %s" (:message &throw-context))))
    (catch [:type :stream-death] {:keys [msg]}
      (quit 15 (format "stream terminated: %s" msg)))
+   (catch [:type :stream-invalid-args] {:keys [msg stream]}
+     (quit 16 (format "%s args invalid: %s" stream msg)))
+   (catch [:type :bad-null-bad] {:keys [where]}
    (catch Object _
      (let [t (:throwable &throw-context)]
        (.printStackTrace t)
