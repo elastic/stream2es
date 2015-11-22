@@ -35,10 +35,10 @@
      (shutdown-agents)
      (System/exit code))))
 
-(defn source2item [_type offset store-offset? source]
+(defn source2item [_type offset store-offset? method source]
   (let [s2e-meta (:__s2e_meta__ source)]
     (BulkItem.
-     {:index
+     {method
       (merge
        {:_type (:_type s2e-meta _type)}
        (when (:_id s2e-meta)
@@ -143,22 +143,21 @@
               idxbulk (make-indexable-bulk bulk)
               idxbulkbytes (count (.getBytes idxbulk))]
           (let [bulk-bytes (reduce + (map #(get-in % [:meta :_bytes]) bulk))
-                errors (when (:indexing @state)
-                         (es/error-capturing-bulk (:target @state) bulk
-                                                  make-indexable-bulk)
-                         (dosync
-                          (alter state update-in [:total :indexed :docs]
-                                 + (count bulk))
-                          (alter state update-in [:total :indexed :bytes]
-                                 + bulk-bytes)
-                          (alter state update-in [:total :indexed :wire-bytes]
-                                 + idxbulkbytes))
-                         (log/trace "adding indexed total"
-                                    (get-in @state [:total :indexed :docs])
-                                    "+" (count bulk)))]
+                error-count (when (:indexing @state)
+                         (es/error-capturing-bulk (:target @state) (:tee-errors @state) bulk
+                                                  make-indexable-bulk))]
+            (log/trace "adding indexed total"
+                       (get-in @state [:total :indexed :docs])
+                       "+" (count bulk))
             (dosync
+             (alter state update-in [:total :indexed :docs]
+                    + (count bulk))
+             (alter state update-in [:total :indexed :bytes]
+                    + bulk-bytes)
+             (alter state update-in [:total :indexed :wire-bytes]
+                    + idxbulkbytes)
              (alter state update-in [:total :errors]
-                    (fnil + 0) (or errors 0)))
+                    (fnil + 0) (or error-count 0)))
             (index-status first-id (count bulk) idxbulkbytes state))
           (when (:tee-bulk @state)
             (spit-mkdirs
@@ -229,6 +228,7 @@
                item (source2item type
                                  (get-in @state [:total :streamed :docs])
                                  (:offset @state)
+                                 (if (:clobber @state) :index :create)
                                  source)]
            (alter state update-in
                   [:bytes] + (-> item :meta :_bytes))
