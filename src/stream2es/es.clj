@@ -57,19 +57,20 @@
   (log/info "delete index" url)
   (http/delete url {:throw-exceptions false}))
 
-(defn error-capturing-bulk [target items serialize-bulk]
+(defn error-capturing-bulk [target tee-errors items serialize-bulk]
   (let [resp (json/decode (:body (post (bulk-url target)
                                        (assoc (.opts target)
                                               :body (serialize-bulk items)))) true)]
     (->> (:items resp)
          (map-indexed (fn [n obj]
                         (when (contains? (val (first obj)) :error)
-                          (spit (str "error-"
-                                     (:_id (val (first obj))))
-                                (with-out-str
-                                  (prn obj)
-                                  (println)
-                                  (prn (nth items n))))
+                          (when tee-errors
+                            (spit (str "error-"
+                                       (:_id (val (first obj))))
+                                  (with-out-str
+                                    (prn obj)
+                                    (println)
+                                    (prn (nth items n)))))
                           obj)))
          (remove nil?)
          count)))
