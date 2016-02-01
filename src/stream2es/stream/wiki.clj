@@ -12,7 +12,7 @@
 (def bulk-bytes (* 3 1024 1024))
 
 (def latest-wiki
-  (str "http://download.wikimedia.org"
+  (str "https://dumps.wikimedia.org"
        "/enwiki/latest/enwiki-latest-pages-articles.xml.bz2"))
 
 (defrecord WikiStream [])
@@ -50,8 +50,7 @@
      :index.refresh_interval :5s
      :query.default_field :text})
   (mappings [_ _]
-    {:_default_ {:_all {:enabled false}
-                 :_size {:enabled true :store true}}}))
+    {:_default_ {:_all {:enabled false}}}))
 
 (extend-type WikiPage
   Streamable
@@ -76,5 +75,5 @@
       (f page))))
 
 (defn make-parser [target handler]
-  (doto (WikiXMLParserFactory/getSAXParser (http/jurl target))
+  (doto (WikiXMLParserFactory/getSAXParser (.jurl target))
     (.setPageCallback (make-callback handler))))

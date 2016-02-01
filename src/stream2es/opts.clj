@@ -28,6 +28,8 @@
    ["-w" "--workers" "Number of indexing threads"
     :default indexing-threads
     :parse-fn #(Integer/parseInt %)]
+   ["--clobber" "Use elasticsearch 'index' operation, clobbering existing documents, no-clobber uses 'create' which will skip/error existing documents" :flag true :default false]
+   ["--tee-errors" "Create error-{id} files" :flag true :default true]
    ["--tee" "Save json request payloads as files in path"]
    ["--tee-bulk" "Save bulk request payloads as files in path"]
    ["--mappings" "Index mappings" :default nil]

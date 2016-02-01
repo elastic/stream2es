@@ -54,6 +54,8 @@ If you're at a café or want to use a local copy of the dump, supply `--source`:
 
     % ./stream2es wiki --max-docs 5 --source /d/data/enwiki-20121201-pages-articles.xml.bz2
 
+Note that if you live-stream the WMF-hosted dump, it will cut off after a while. Grab a torrent and index it locally if you need more than a few thousand docs.
+
 ## Generator
 
 `stream2es` can fuzz data for you.  It can create blank documents, or documents with integer fields, or documents with string fields if you supply a dictionary.

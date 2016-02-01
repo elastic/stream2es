@@ -13,3 +13,7 @@ pom.xml.asc
 .lein-repl-history
 /tmp
 /.nrepl-port
+
+# intellij / cursive ignore
+.idea
+*.iml

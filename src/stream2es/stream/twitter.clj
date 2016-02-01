@@ -90,7 +90,6 @@
     {(or (keyword (-> opts :target es/type-name))
          default-type)
      {:_all {:enabled false}
-      :_size {:enabled true :store true}
       :dynamic_date_formats [weird-twitter-date-format
                              "date_time"
                              "date_optional_time"]
