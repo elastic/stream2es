@@ -42,8 +42,9 @@
              (recur in)))))))
   StreamStorage
   (settings [_ opts]
-    {:index.number_of_shards 2
-     :index.number_of_replicas 0})
+    {:index.number_of_shards 1
+     :index.number_of_replicas 0
+     :index.refresh_interval -1})
   (mappings [_ opts]
     {(keyword (-> opts :target es/type-name))
      {:_all {:enabled false}
