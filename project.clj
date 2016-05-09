@@ -9,18 +9,18 @@
   :license {:name "Apache 2"
             :url "http://www.apache.org/licenses/LICENSE-2.0.html"}
   :resource-paths ["etc" "resources"]
-  :dependencies [[cheshire "5.0.1"]
-                 [clj-http "1.0.1"]
-                 [org.clojure/clojure "1.6.0"]
-                 [org.clojure/tools.cli "0.2.2"]
-                 [org.elasticsearch/elasticsearch-river-wikipedia "1.2.0"]
+  :dependencies [[cheshire "5.6.1"]
+                 [clj-http "3.0.1"]
+                 [org.clojure/clojure "1.8.0"]
+                 [org.clojure/tools.cli "0.3.5"]
+                 [org.elasticsearch/elasticsearch-river-wikipedia "2.6.0"]
                  [org.twitter4j/twitter4j-stream "3.0.5"]
-                 [slingshot "0.10.3"]
-                 [clj-oauth "1.4.0"]
-                 [org.tukaani/xz "1.3"]
+                 [slingshot "0.12.2"]
+                 [clj-oauth "1.5.5"]
+                 [org.tukaani/xz "1.5"]
                  [org.elasticsearch/elastiqueue "0.99.1"]
-                 [com.taoensso/timbre "3.3.1"]
-                 [org.clojure/core.typed "0.3.0-alpha2"]]
+                 [com.taoensso/timbre "4.3.1"]
+                 [org.clojure/core.typed "0.3.23"]]
   :plugins [[lein-bin "0.3.2"]]
   :aot :all
   :main stream2es.main

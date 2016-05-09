@@ -50,7 +50,7 @@
    ["--target" "ES location" :default "http://localhost:9200"]
    ["-h" "--help" "Display help" :flag true :default false]
    ["--log" (format "Log level (%s)"
-                    (->> taoensso.timbre/levels-ordered
+                    (->> taoensso.timbre/ordered-levels
                          (interpose " ")
                          (map name)
                          (apply str)))
