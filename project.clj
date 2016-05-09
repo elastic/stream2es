@@ -18,7 +18,6 @@
                  [slingshot "0.12.2"]
                  [clj-oauth "1.5.5"]
                  [org.tukaani/xz "1.5"]
-                 [org.elasticsearch/elastiqueue "0.99.1"]
                  [com.taoensso/timbre "4.3.1"]
                  [org.clojure/core.typed "0.3.23"]]
   :plugins [[lein-bin "0.3.2"]]

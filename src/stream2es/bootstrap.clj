@@ -7,7 +7,6 @@
   (:require [stream2es.stream :as stream]
             [stream2es.stream.es]
             [stream2es.stream.generator]
-            [stream2es.stream.queue]
             [stream2es.stream.stdin]
             [stream2es.stream.twitter :as twitter]
             [stream2es.stream.wiki]))
@@ -18,7 +17,7 @@
     (println)
     (println "Usage: stream2es [CMD] [OPTS]")
     (println)
-    (println "Available commands: wiki, twitter, stdin, queue, es")
+    (println "Available commands: wiki, twitter, stdin, es")
     (println)
     (println "Common opts:")
     (print (help/help opts/common))))
