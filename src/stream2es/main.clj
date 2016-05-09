@@ -47,7 +47,7 @@
          {:_routing (:_routing s2e-meta)})
        (when (:_parent s2e-meta)
          {:_parent (:_parent s2e-meta)}))
-      :_bytes (-> source json/encode .getBytes count)}
+      :_bytes (-> source json/encode count)}
      (merge (dissoc source :__s2e_meta__)
             (when store-offset?
               {opts/offset-field offset})))))
@@ -95,7 +95,7 @@
     (let [sub (s/hash-dir 2)
           path (io/file path sub)
           f (io/file path (str name ".gz"))]
-      (log/trace "save" (str f) (count (.getBytes data)) "bytes")
+      (log/trace "save" (str f) (count data) "bytes")
       (.mkdirs (io/file path))
       (io/spit-gz f data))))
 
@@ -141,7 +141,7 @@
       (when (and (sequential? bulk) (pos? (count bulk)))
         (let [first-id (-> bulk first :meta :index :_id)
               idxbulk (make-indexable-bulk bulk)
-              idxbulkbytes (count (.getBytes idxbulk))]
+              idxbulkbytes (count idxbulk)]
           (let [bulk-bytes (reduce + (map #(get-in % [:meta :_bytes]) bulk))
                 error-count (when (:indexing @state)
                          (es/error-capturing-bulk (:target @state) (:tee-errors @state) bulk
@@ -234,7 +234,7 @@
                   [:bytes] + (-> item :meta :_bytes))
            (alter state update-in
                   [:total :streamed :bytes]
-                  + (-> source str .getBytes count))
+                  + (-> source str count))
            (alter state update-in
                   [:items] conj item)))))))
 
