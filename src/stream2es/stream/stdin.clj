@@ -34,10 +34,9 @@
   (make-runner [_ opts handler]
     (StdinStreamRunner.
      (fn []
-       (do
-         (doseq [line (line-seq (io/reader *in*))] 
-           (handler line))
-         (handler :eof)))))
+       (doseq [line (line-seq (io/reader *in*))] 
+         (handler line))
+       (handler :eof))))
   StreamStorage
   (settings [_ opts]
     {:index.number_of_shards 2
