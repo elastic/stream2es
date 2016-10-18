@@ -8,7 +8,7 @@ Standalone utility to stream different inputs into Elasticsearch.
 
 ## Install
 
-You'll need Java 7.  Run `java -version` to make sure.
+You'll need Java 8+.  Run `java -version` to make sure.
 
 ### Unix
 
