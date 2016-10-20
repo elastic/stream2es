@@ -48,7 +48,7 @@ Index the latest Wikipedia article dump.
     % stream2es wiki --target http://localhost:9200/tmp --log debug
     create index http://localhost:9200/tmp
     stream wiki from http://download.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles.xml.bz2
-    ^Cstreamed 1158 docs 1082 bytes xfer 15906901 errors 0
+    streamed 1158 docs 1082 bytes xfer 15906901 errors 0
 
 If you're at a café or want to use a local copy of the dump, supply `--source`:
 
