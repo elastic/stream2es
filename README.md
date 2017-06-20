@@ -111,7 +111,7 @@ Fortunately, most *nix systems come with `/usr/share/dict/words` (Ubuntu package
 
 ## Elasticsearch
 
-*Note: Logstash 1.5.0 has an [Elasticsearch input](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-elasticsearch.html).*
+*Note: ES 2.3 added a [reindex API](https://www.elastic.co/guide/en/elasticsearch/reference/5.4/docs-reindex.html) that completely obviates this feature of stream2es.  Also, Logstash 1.5.0 has an [Elasticsearch input](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-elasticsearch.html).*
 
 If you use the `es` stream, you can copy indices from one Elasticsearch to another.  Example:
 
